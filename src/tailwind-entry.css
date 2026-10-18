@@ -1,0 +1,7 @@
+/* Compiled by @tailwindcss/vite in normal Vite development/build.
+   The self-contained demo UI also has an independent stylesheet for offline preview. */
+@import "tailwindcss";
+@theme {
+  --color-simagang: #17305C;
+  --color-simagang-light: #eaf2fc;
+}
