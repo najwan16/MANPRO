@@ -1,232 +1,1088 @@
-﻿import {simulations,getCompany,getSimulation,rupiah,CASE} from './data/catalog.js';
-import {freeTask,tasks,getOptionLabel,taskById} from './data/systemAnalyst.js';
-import {assess,weightedScore,completion,certificateEligible,submittedTask,RUBRIC_VERSION} from './assessment/rubricEngine.js';
-import {api} from './services/index.js';
-import {downloadText} from './utils/storage.js';
+﻿import {
+  simulations,
+  getCompany,
+  getSimulation,
+  rupiah,
+  CASE,
+} from "./data/catalog.js";
+import {
+  freeTask,
+  tasks,
+  getOptionLabel,
+  taskById,
+} from "./data/systemAnalyst.js";
+import {
+  assess,
+  weightedScore,
+  completion,
+  certificateEligible,
+  submittedTask,
+  RUBRIC_VERSION,
+} from "./assessment/rubricEngine.js";
+import { api } from "./services/index.js";
+import { downloadText } from "./utils/storage.js";
 
-const app=document.getElementById('app');
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const iconPaths={
-  'briefcase':'<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M3 12h18M10 12v2h4v-2"/>',
-  'arrow':'<path d="M5 12h14m-6-6 6 6-6 6"/>','chevron':'<path d="m9 18 6-6-6-6"/>','check':'<path d="m5 12 4 4L19 6"/>',
-  'check-circle':'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>','circle':'<circle cx="12" cy="12" r="9"/>',
-  'search':'<circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>',
-  'clipboard':'<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6m-6 4h6"/>',
-  'code':'<path d="m8 8-4 4 4 4m8-8 4 4-4 4m-3-13-2 18"/>',
-  'chart':'<rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/>',
-  'workflow':'<rect x="3" y="3" width="7" height="6" rx="1"/><rect x="14" y="15" width="7" height="6" rx="1"/><path d="M6.5 9v8h7.5m0-11h7M17.5 3v6"/>',
-  'pen':'<path d="m14 5 5 5M3 21l5-.9L20 8a2 2 0 00-3-3L5 17z"/>',
-  'megaphone':'<path d="M3 10v4l10 4V6L3 10Zm10-3 6-3v16l-6-3M5 14l2 7h4l-2-6"/>',
-  'award':'<circle cx="12" cy="8" r="5"/><path d="m8 12-2 9 6-3 6 3-2-9"/>',
-  'file':'<path d="M5 2h9l5 5v15H5zM14 2v6h5M8 13h8M8 17h8"/>',
-  'refresh':'<path d="M20 7a9 9 0 10 1 8M20 2v5h-5"/>',
-  'shield':'<path d="M12 2 20 6v6c0 5-4 8-8 10C8 20 4 17 4 12V6z"/><path d="m9 12 2 2 4-4"/>',
-  'lock':'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 118 0v3"/>',
-  'user':'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
-  'bolt':'<path d="M13 2 5 13h6l-1 9 9-12h-6z"/>',
-  'clock':'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/>',
-  'target':'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
-  'spark':'<path d="m12 2 2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/>',
-  'play':'<path d="m8 5 11 7-11 7z"/>',
-  'download':'<path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/>',
-  'alert':'<path d="m12 2 10 19H2L12 2zM12 9v5m0 3v.2"/>',
-  'book':'<path d="M4 4h14a2 2 0 012 2v14H6a2 2 0 01-2-2zM4 6a2 2 0 012-2m1 5h9M7 13h7"/>',
-  'menu':'<path d="M4 6h16M4 12h16M4 18h16"/>',
-  'layers':'<path d="m12 2 10 5-10 5L2 7zM2 12l10 5 10-5M2 17l10 5 10-5"/>',
-  'logout':'<path d="M9 4H4v16h5m5-12 4 4-4 4m-8-4h12"/>',
-  'copy':'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2h3"/>',
-  'info':'<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/>',
-  'filter':'<path d="M4 7h16M7 12h10m-7 5h4"/>',
-  'external':'<path d="M13 4h7v7m0-7-9 9M20 14v6H4V4h6"/>'
+const app = document.getElementById("app");
+const esc = (v) =>
+  String(v ?? "").replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ],
+  );
+const iconPaths = {
+  briefcase:
+    '<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M3 12h18M10 12v2h4v-2"/>',
+  arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+  chevron: '<path d="m9 18 6-6-6-6"/>',
+  check: '<path d="m5 12 4 4L19 6"/>',
+  "check-circle": '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+  circle: '<circle cx="12" cy="12" r="9"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>',
+  clipboard:
+    '<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6m-6 4h6"/>',
+  code: '<path d="m8 8-4 4 4 4m8-8 4 4-4 4m-3-13-2 18"/>',
+  chart:
+    '<rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/>',
+  workflow:
+    '<rect x="3" y="3" width="7" height="6" rx="1"/><rect x="14" y="15" width="7" height="6" rx="1"/><path d="M6.5 9v8h7.5m0-11h7M17.5 3v6"/>',
+  pen: '<path d="m14 5 5 5M3 21l5-.9L20 8a2 2 0 00-3-3L5 17z"/>',
+  megaphone:
+    '<path d="M3 10v4l10 4V6L3 10Zm10-3 6-3v16l-6-3M5 14l2 7h4l-2-6"/>',
+  award: '<circle cx="12" cy="8" r="5"/><path d="m8 12-2 9 6-3 6 3-2-9"/>',
+  file: '<path d="M5 2h9l5 5v15H5zM14 2v6h5M8 13h8M8 17h8"/>',
+  refresh: '<path d="M20 7a9 9 0 10 1 8M20 2v5h-5"/>',
+  shield:
+    '<path d="M12 2 20 6v6c0 5-4 8-8 10C8 20 4 17 4 12V6z"/><path d="m9 12 2 2 4-4"/>',
+  lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 118 0v3"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
+  bolt: '<path d="M13 2 5 13h6l-1 9 9-12h-6z"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/>',
+  target:
+    '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  spark:
+    '<path d="m12 2 2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/>',
+  play: '<path d="m8 5 11 7-11 7z"/>',
+  download: '<path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/>',
+  alert: '<path d="m12 2 10 19H2L12 2zM12 9v5m0 3v.2"/>',
+  book: '<path d="M4 4h14a2 2 0 012 2v14H6a2 2 0 01-2-2zM4 6a2 2 0 012-2m1 5h9M7 13h7"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  layers: '<path d="m12 2 10 5-10 5L2 7zM2 12l10 5 10-5M2 17l10 5 10-5"/>',
+  logout: '<path d="M9 4H4v16h5m5-12 4 4-4 4m-8-4h12"/>',
+  copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2h3"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/>',
+  filter: '<path d="M4 7h16M7 12h10m-7 5h4"/>',
+  external: '<path d="M13 4h7v7m0-7-9 9M20 14v6H4V4h6"/>',
 };
-const ico=(name,cls='')=>`<svg class="ico ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]||iconPaths.circle}</svg>`;
-const A=(route,label,variant='primary',attrs='')=>`<a href="#/${route}" class="btn btn-${variant}" ${attrs}>${label}</a>`;
-const pill=(label,type='soft')=>`<span class="pill pill-${type}">${esc(label)}</span>`;
-const route=()=>decodeURIComponent((location.hash.replace(/^#\/?/,'')||'home').split('?')[0]);
-const go=target=>{location.hash='#/'+target;if(route()===target)render(true);};
-const pendingKey='simagang:v3:pending';
-const setPending=target=>sessionStorage.setItem(pendingKey,target);
-const takePending=()=>{const x=sessionStorage.getItem(pendingKey);sessionStorage.removeItem(pendingKey);return x||'dashboard';};
-const state=()=>api.state();
-const art=(type='workflow')=>`<div class="product-art art-${esc(type)}"><div class="art-circle"></div><span class="art-lines"></span>${ico(type,'art-icon')}<span class="art-caption">SIMULASI PEKERJAAN</span></div>`;
-const logo=(company)=>`<div class="company-avatar" style="background:${company.color}">${esc(company.initials)}</div>`;
-const dated=str=>new Date(str).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
-const pageTitles={auth:'Masuk',register:'Daftar',about:'Tentang SiMagang',help:'Pusat Bantuan',privacy:'Privasi Data Demo',explore:'Jelajahi Simulasi',detail:'Rincian Simulasi',free:'Latihan Gratis','free-result':'Hasil Latihan Gratis',checkout:'Konfirmasi Akses',welcome:'Pengantar Proyek',workspace:'Ruang Kerja',report:'Laporan Kinerja',portfolio:'Portofolio',certificate:'Sertifikat'};
-const fieldName=(f,v)=>f.type==='textarea'?(String(v||'').trim()||'Belum diisi'):f.type==='multi'?(v||[]).map(x=>getOptionLabel(f,x)).join('; ')||'Belum diisi':getOptionLabel(f,v);
-const sectionTitle=(eyebrow,title,subtitle='')=>`<div class="section-heading"><div class="eyebrow">${eyebrow}</div><h2>${title}</h2>${subtitle?`<p>${subtitle}</p>`:''}</div>`;
-const currentAttempt=()=>api.getActive();
-const canTask=(task,attempt)=>task.number===1||Boolean(submittedTask(attempt?.tasks?.[tasks[task.number-2].id]));
+const ico = (name, cls = "") =>
+  `<svg class="ico ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name] || iconPaths.circle}</svg>`;
+const A = (route, label, variant = "primary", attrs = "") =>
+  `<a href="#/${route}" class="btn btn-${variant}" ${attrs}>${label}</a>`;
+const pill = (label, type = "soft") =>
+  `<span class="pill pill-${type}">${esc(label)}</span>`;
+const route = () =>
+  decodeURIComponent(
+    (location.hash.replace(/^#\/?/, "") || "home").split("?")[0],
+  );
+const go = (target) => {
+  location.hash = "#/" + target;
+  if (route() === target) render(true);
+};
+const pendingKey = "simagang:v3:pending";
+const setPending = (target) => sessionStorage.setItem(pendingKey, target);
+const takePending = () => {
+  const x = sessionStorage.getItem(pendingKey);
+  sessionStorage.removeItem(pendingKey);
+  return x || "dashboard";
+};
+const state = () => api.state();
+const art = (type = "workflow") =>
+  `<div class="product-art art-${esc(type)}"><div class="art-circle"></div><span class="art-lines"></span>${ico(type, "art-icon")}<span class="art-caption">SIMULASI PEKERJAAN</span></div>`;
+const logo = (company) =>
+  `<div class="company-avatar" style="background:${company.color}">${esc(company.initials)}</div>`;
+const dated = (str) =>
+  new Date(str).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+const pageTitles = {
+  auth: "Masuk",
+  register: "Daftar",
+  about: "Tentang SiMagang",
+  help: "Pusat Bantuan",
+  privacy: "Privasi Data Demo",
+  explore: "Jelajahi Simulasi",
+  detail: "Rincian Simulasi",
+  free: "Latihan Gratis",
+  "free-result": "Hasil Latihan Gratis",
+  checkout: "Konfirmasi Akses",
+  welcome: "Pengantar Proyek",
+  workspace: "Ruang Kerja",
+  report: "Laporan Kinerja",
+  portfolio: "Portofolio",
+  certificate: "Sertifikat",
+};
+const fieldName = (f, v) =>
+  f.type === "textarea"
+    ? String(v || "").trim() || "Belum diisi"
+    : f.type === "multi"
+      ? (v || []).map((x) => getOptionLabel(f, x)).join("; ") || "Belum diisi"
+      : getOptionLabel(f, v);
+const sectionTitle = (eyebrow, title, subtitle = "") =>
+  `<div class="section-heading"><div class="eyebrow">${eyebrow}</div><h2>${title}</h2>${subtitle ? `<p>${subtitle}</p>` : ""}</div>`;
+const currentAttempt = () => api.getActive();
+const canTask = (task, attempt) =>
+  task.number === 1 ||
+  Boolean(submittedTask(attempt?.tasks?.[tasks[task.number - 2].id]));
 
-const initials=name=>String(name||'P').trim().split(/\s+/).slice(0,2).map(part=>part[0]?.toUpperCase()||'').join('');
-let progressFilter='all';
-let progressFilterOwner=null;
-function progressPage(){
-  const owner=state().user?.email||null;
-  if(owner!==progressFilterOwner){progressFilter='all';progressFilterOwner=owner;}
+const initials = (name) =>
+  String(name || "P")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+let progressFilter = "all";
+let progressFilterOwner = null;
+function progressPage() {
+  const owner = state().user?.email || null;
+  if (owner !== progressFilterOwner) {
+    progressFilter = "all";
+    progressFilterOwner = owner;
+  }
   let owned;
-  try{owned=api.getMySimulations();}catch{return `<section class="container page-pad my-progress-page"><h1>Progres Saya</h1><div class="my-progress-empty" role="alert"><h2>Progres belum dapat dimuat.</h2><p>Coba buka kembali halaman ini beberapa saat lagi.</p>${A('progress','Coba lagi','primary')}</div></section>`;}
-  const activeCount=owned.filter(item=>item.status==='in-progress').length;
-  const completedCount=owned.filter(item=>item.status==='completed').length;
-  const shown=progressFilter==='all'?owned:owned.filter(item=>item.status===progressFilter);
-  const labels={all:'Semua','in-progress':'Berlangsung',completed:'Selesai'};
-  const emptyMessage=progressFilter==='in-progress'?'Tidak ada simulasi yang sedang berlangsung.':progressFilter==='completed'?'Belum ada simulasi yang selesai.':'Belum ada simulasi yang kamu ikuti.';
+  try {
+    owned = api.getMySimulations();
+  } catch {
+    return `<section class="container page-pad my-progress-page"><h1>Progres Saya</h1><div class="my-progress-empty" role="alert"><h2>Progres belum dapat dimuat.</h2><p>Coba buka kembali halaman ini beberapa saat lagi.</p>${A("progress", "Coba lagi", "primary")}</div></section>`;
+  }
+  const activeCount = owned.filter(
+    (item) => item.status === "in-progress",
+  ).length;
+  const completedCount = owned.filter(
+    (item) => item.status === "completed",
+  ).length;
+  const shown =
+    progressFilter === "all"
+      ? owned
+      : owned.filter((item) => item.status === progressFilter);
+  const labels = {
+    all: "Semua",
+    "in-progress": "Berlangsung",
+    completed: "Selesai",
+  };
+  const emptyMessage =
+    progressFilter === "in-progress"
+      ? "Tidak ada simulasi yang sedang berlangsung."
+      : progressFilter === "completed"
+        ? "Belum ada simulasi yang selesai."
+        : "Belum ada simulasi yang kamu ikuti.";
   return `<section class="my-progress-page"><div class="container my-progress-container"><header class="my-progress-header"><span class="my-progress-kicker">SIMULASI MILIKMU</span><h1>Progres Saya</h1><p>Pantau perkembangan simulasi dan lanjutkan pekerjaanmu.</p></header>
-    <section class="my-progress-overview" aria-label="Ringkasan simulasi"><article class="my-progress-stat"><span class="my-progress-stat-icon">${ico('briefcase')}</span><div><span>Sedang Dikerjakan</span><strong>${activeCount}</strong></div></article><article class="my-progress-stat"><span class="my-progress-stat-icon complete">${ico('check-circle')}</span><div><span>Selesai</span><strong>${completedCount}</strong></div></article></section>
-    <div class="my-progress-list-heading"><div><h2>Simulasi kamu</h2><p>${shown.length} simulasi ditampilkan</p></div><div class="my-progress-filters" role="group" aria-label="Filter status simulasi">${Object.entries(labels).map(([key,label])=>`<button type="button" class="my-progress-filter ${progressFilter===key?'selected':''}" data-act="progress-filter" data-filter="${key}" aria-pressed="${progressFilter===key}">${label}</button>`).join('')}</div></div>
-    <div class="my-progress-list" aria-live="polite">${shown.length?shown.map(item=>{const simulation=getSimulation(item.simulationId),company=getCompany(simulation.company),statusText=item.status==='completed'?'Selesai':item.status==='in-progress'?'Berlangsung':'Belum Dimulai',nextText=item.status==='completed'?'Semua tugas telah selesai':item.status==='in-progress'?item.nextTaskTitle:'Mulai dari pengantar proyek',actionRoute=item.status==='completed'?`report/${encodeURIComponent(item.attemptId)}`:item.status==='in-progress'?`workspace/${item.nextTaskId}`:'welcome',actionLabel=item.status==='completed'?'Lihat Hasil':item.status==='in-progress'?'Lanjutkan Simulasi':'Mulai Simulasi',project=simulation.id==='system-analyst'?CASE.name:simulation.title;return `<article class="my-progress-card"><div class="my-progress-card-top"><span class="my-progress-project-icon">${ico(simulation.icon)}</span><div class="my-progress-project"><h3>${esc(simulation.role)}</h3><p>${esc(project)}</p><small>${esc(company.name)} · Perusahaan fiktif</small></div><span class="my-progress-status status-${item.status}">${statusText}</span></div><div class="my-progress-card-body"><div class="my-progress-progress-label"><b>${item.completedTasks} dari ${item.totalTasks} tugas selesai</b><span>${item.percent}%</span></div><div class="my-progress-bar" role="progressbar" aria-label="Progres ${esc(simulation.role)}" aria-valuenow="${item.completedTasks}" aria-valuemin="0" aria-valuemax="${item.totalTasks}"><span style="width:${item.percent}%"></span></div><p class="my-progress-next"><strong>${item.status==='completed'?'Hasil':'Aktivitas berikutnya'}:</strong> ${esc(nextText)}</p></div>${A(actionRoute,`${actionLabel} ${ico('arrow')}`,'primary')}</article>`;}).join(''):`<div class="my-progress-empty"><span class="my-progress-empty-icon">${ico(progressFilter==='completed'?'check-circle':'briefcase')}</span><h3>${emptyMessage}</h3><p>${owned.length?'Pilih status lain untuk melihat simulasimu.':'Mulai jelajahi simulasi pekerjaan untuk mempersiapkan magangmu.'}</p>${!owned.length?A('explore','Jelajahi Simulasi','primary'):''}</div>`}</div>
+    <section class="my-progress-overview" aria-label="Ringkasan simulasi"><article class="my-progress-stat"><span class="my-progress-stat-icon">${ico("briefcase")}</span><div><span>Sedang Dikerjakan</span><strong>${activeCount}</strong></div></article><article class="my-progress-stat"><span class="my-progress-stat-icon complete">${ico("check-circle")}</span><div><span>Selesai</span><strong>${completedCount}</strong></div></article></section>
+    <div class="my-progress-list-heading"><div><h2>Simulasi kamu</h2><p>${shown.length} simulasi ditampilkan</p></div><div class="my-progress-filters" role="group" aria-label="Filter status simulasi">${Object.entries(
+      labels,
+    )
+      .map(
+        ([key, label]) =>
+          `<button type="button" class="my-progress-filter ${progressFilter === key ? "selected" : ""}" data-act="progress-filter" data-filter="${key}" aria-pressed="${progressFilter === key}">${label}</button>`,
+      )
+      .join("")}</div></div>
+    <div class="my-progress-list" aria-live="polite">${
+      shown.length
+        ? shown
+            .map((item) => {
+              const simulation = getSimulation(item.simulationId),
+                company = getCompany(simulation.company),
+                statusText =
+                  item.status === "completed"
+                    ? "Selesai"
+                    : item.status === "in-progress"
+                      ? "Berlangsung"
+                      : "Belum Dimulai",
+                nextText =
+                  item.status === "completed"
+                    ? "Semua tugas telah selesai"
+                    : item.status === "in-progress"
+                      ? item.nextTaskTitle
+                      : "Mulai dari pengantar proyek",
+                actionRoute =
+                  item.status === "completed"
+                    ? `report/${encodeURIComponent(item.attemptId)}`
+                    : item.status === "in-progress"
+                      ? `workspace/${item.nextTaskId}`
+                      : "welcome",
+                actionLabel =
+                  item.status === "completed"
+                    ? "Lihat Hasil"
+                    : item.status === "in-progress"
+                      ? "Lanjutkan Simulasi"
+                      : "Mulai Simulasi",
+                project =
+                  simulation.id === "system-analyst"
+                    ? CASE.name
+                    : simulation.title;
+              return `<article class="my-progress-card"><div class="my-progress-card-top"><span class="my-progress-project-icon">${ico(simulation.icon)}</span><div class="my-progress-project"><h3>${esc(simulation.role)}</h3><p>${esc(project)}</p><small>${esc(company.name)} · Perusahaan fiktif</small></div><span class="my-progress-status status-${item.status}">${statusText}</span></div><div class="my-progress-card-body"><div class="my-progress-progress-label"><b>${item.completedTasks} dari ${item.totalTasks} tugas selesai</b><span>${item.percent}%</span></div><div class="my-progress-bar" role="progressbar" aria-label="Progres ${esc(simulation.role)}" aria-valuenow="${item.completedTasks}" aria-valuemin="0" aria-valuemax="${item.totalTasks}"><span style="width:${item.percent}%"></span></div><p class="my-progress-next"><strong>${item.status === "completed" ? "Hasil" : "Aktivitas berikutnya"}:</strong> ${esc(nextText)}</p></div>${A(actionRoute, `${actionLabel} ${ico("arrow")}`, "primary")}</article>`;
+            })
+            .join("")
+        : `<div class="my-progress-empty"><span class="my-progress-empty-icon">${ico(progressFilter === "completed" ? "check-circle" : "briefcase")}</span><h3>${emptyMessage}</h3><p>${owned.length ? "Pilih status lain untuk melihat simulasimu." : "Mulai jelajahi simulasi pekerjaan untuk mempersiapkan magangmu."}</p>${!owned.length ? A("explore", "Jelajahi Simulasi", "primary") : ""}</div>`
+    }</div>
   </div></section>`;
 }
-function dashboard(){
-  const s=state(),summary=api.getDashboardSummary();
-  const name=String(s.user?.nickname||s.user?.name||'').trim();
-  const greeting=name?`Halo, ${esc(name.split(/\s+/)[0])}! 👋`:'Halo, selamat datang kembali!';
-  const active=summary.active;
-  const recent=summary.recentCompleted;
-  const resultRoute=recent?`/${encodeURIComponent(recent.id)}`:'';
-  const continueRoute=active?`workspace/${active.nextTaskId}`:summary.hasAccess?'welcome':summary.free?'explore':'free';
-  const continueLabel=active?'Lanjutkan Simulasi':summary.hasAccess?'Mulai Simulasi':summary.free?'Jelajahi Simulasi':'Coba Tugas Gratis';
+function dashboard() {
+  const s = state(),
+    summary = api.getDashboardSummary();
+  const name = String(s.user?.nickname || s.user?.name || "").trim();
+  const greeting = name
+    ? `Halo, ${esc(name.split(/\s+/)[0])}! 👋`
+    : "Halo, selamat datang kembali!";
+  const active = summary.active;
+  const recent = summary.recentCompleted;
+  const resultRoute = recent ? `/${encodeURIComponent(recent.id)}` : "";
+  const continueRoute = active
+    ? `workspace/${active.nextTaskId}`
+    : summary.hasAccess
+      ? "welcome"
+      : summary.free
+        ? "explore"
+        : "free";
+  const continueLabel = active
+    ? "Lanjutkan Simulasi"
+    : summary.hasAccess
+      ? "Mulai Simulasi"
+      : summary.free
+        ? "Jelajahi Simulasi"
+        : "Coba Tugas Gratis";
   return `<section class="dashboard-page"><div class="container dashboard-container">
     <header class="dashboard-welcome"><div><span class="dashboard-kicker">DASHBOARD MAHASISWA</span><h1>${greeting}</h1><p>Lanjutkan progresmu dan persiapkan diri untuk pengalaman magang yang lebih baik.</p></div><span class="profile-avatar dashboard-welcome-avatar tone-${avatarTone(s.user)}" aria-hidden="true">${esc(initials(displayName(s.user)))}</span></header>
-    <section class="dashboard-section" aria-labelledby="dashboard-overview-title"><div class="dashboard-section-heading"><div><span class="dashboard-kicker">RINGKASAN</span><h2 id="dashboard-overview-title">Ringkasan</h2></div></div><div class="dashboard-overview-grid"><article class="dashboard-metric"><span class="dashboard-metric-icon">${ico('briefcase')}</span><div><span>Simulasi Diikuti</span><strong>${summary.joinedCount}</strong></div></article><article class="dashboard-metric"><span class="dashboard-metric-icon complete">${ico('check-circle')}</span><div><span>Simulasi Selesai</span><strong>${summary.completedCount}</strong></div></article></div></section>
-    <section class="dashboard-section" aria-labelledby="dashboard-progress-title"><div class="dashboard-section-heading"><div><span class="dashboard-kicker">LANJUTKAN SIMULASI</span><h2 id="dashboard-progress-title">Progresmu</h2></div>${active?A('progress','Lihat semua progres','light'):''}</div>${active?`<article class="dashboard-active-card"><div class="dashboard-active-top"><span class="dashboard-position-icon">${ico('workflow')}</span><div class="dashboard-active-identity"><span class="dashboard-status">Sedang Berlangsung</span><h3>System Analyst</h3><p>${esc(CASE.name)} <span aria-hidden="true">·</span> ${esc(getCompany('nusa').name)}</p></div></div><div class="dashboard-progress-meta"><b>${active.finishedTasks} dari ${active.totalTasks} tugas selesai</b><span>${Math.round(active.finishedTasks/active.totalTasks*100)}%</span></div><div class="dashboard-progress-track" role="progressbar" aria-label="Progres simulasi System Analyst" aria-valuemin="0" aria-valuemax="${active.totalTasks}" aria-valuenow="${active.finishedTasks}"><span style="width:${active.finishedTasks/active.totalTasks*100}%"></span></div><p class="dashboard-next-task">Berikutnya: ${esc(taskById(active.nextTaskId)?.title||'Lanjutkan tugas')}</p>${A(continueRoute,`Lanjutkan Simulasi ${ico('arrow')}`,'primary')}</article>`:`<div class="dashboard-empty-card"><span class="dashboard-empty-icon">${ico(recent?'check-circle':'workflow')}</span><div><h3>${recent?'Simulasi terakhirmu sudah selesai.':'Belum ada simulasi yang sedang kamu kerjakan.'}</h3><p>${recent?'Lihat hasil pekerjaanmu atau jelajahi posisi lain.':summary.hasAccess?'Proyek System Analyst siap dimulai.':'Pilih simulasi yang ingin dicoba dan mulai dari langkah pertama.'}</p></div><div class="dashboard-empty-actions">${A(recent?`report${resultRoute}`:continueRoute,recent?'Lihat Hasil':continueLabel,'primary')}${recent?A('explore','Jelajahi Simulasi','light'):''}</div></div>`}</section>
-    <section class="dashboard-section" aria-labelledby="dashboard-recommend-title"><div class="dashboard-section-heading"><div><span class="dashboard-kicker">UNTUK KAMU</span><h2 id="dashboard-recommend-title">Rekomendasi pekerjaan</h2></div></div><div class="dashboard-recommend-grid">${summary.recommendations.map(({simulation,reason,detail})=>`<article class="dashboard-recommend-card"><span class="dashboard-recommend-icon">${ico(simulation.icon)}</span><div class="dashboard-recommend-content"><span class="dashboard-reason">${esc(reason)}</span><h3>${esc(simulation.role)}</h3><p>${esc(detail||simulation.teaser)}</p><div class="dashboard-skill-list">${simulation.skills.slice(0,3).map(skill=>`<span>${esc(skill)}</span>`).join('')}</div><div class="dashboard-recommend-bottom"><span class="dashboard-availability ${simulation.status==='ready'?'available':''}">${simulation.status==='ready'?'Tersedia':'Pratinjau · Segera hadir'}</span><a href="#/detail/${esc(simulation.id)}">Lihat Rincian ${ico('arrow')}</a></div></div></article>`).join('')}</div></section>
-    <section class="dashboard-section" aria-labelledby="dashboard-results-title"><div class="dashboard-section-heading"><div><span class="dashboard-kicker">HASIL PEKERJAAN</span><h2 id="dashboard-results-title">Hasil simulasimu</h2></div></div><div class="dashboard-results-card">${recent?`<div class="dashboard-results-main"><span class="dashboard-results-icon">${ico('file')}</span><div><span class="dashboard-results-status">Selesai</span><h3>System Analyst</h3><p>${esc(CASE.name)} · ${dated(submittedTask(recent.tasks.validation)?.submittedAt||recent.createdAt)}</p></div></div><div class="dashboard-results-links">${A(`report${resultRoute}`,'Laporan Kinerja','light')}${A(`portfolio${resultRoute}`,'Portofolio','light')}${certificateEligible(tasks,recent)?A(`certificate${resultRoute}`,'Sertifikat','light'):''}</div>`:`<div class="dashboard-results-main"><span class="dashboard-results-icon">${ico('file')}</span><div><h3>Hasilmu akan tampil di sini</h3><p>Selesaikan simulasi untuk melihat laporan dan portofoliomu.</p></div></div>`}</div></section>
+    <section class="dashboard-section" aria-labelledby="dashboard-overview-title"><div class="dashboard-section-heading"><div><span class="dashboard-kicker">RINGKASAN</span><h2 id="dashboard-overview-title">Ringkasan</h2></div></div><div class="dashboard-overview-grid"><article class="dashboard-metric"><span class="dashboard-metric-icon">${ico("briefcase")}</span><div><span>Simulasi Diikuti</span><strong>${summary.joinedCount}</strong></div></article><article class="dashboard-metric"><span class="dashboard-metric-icon complete">${ico("check-circle")}</span><div><span>Simulasi Selesai</span><strong>${summary.completedCount}</strong></div></article></div></section>
+    <section class="dashboard-section" aria-labelledby="dashboard-progress-title"><div class="dashboard-section-heading"><div><span class="dashboard-kicker">LANJUTKAN SIMULASI</span><h2 id="dashboard-progress-title">Progresmu</h2></div>${active ? A("progress", "Lihat semua progres", "light") : ""}</div>${active ? `<article class="dashboard-active-card"><div class="dashboard-active-top"><span class="dashboard-position-icon">${ico("workflow")}</span><div class="dashboard-active-identity"><span class="dashboard-status">Sedang Berlangsung</span><h3>System Analyst</h3><p>${esc(CASE.name)} <span aria-hidden="true">·</span> ${esc(getCompany("nusa").name)}</p></div></div><div class="dashboard-progress-meta"><b>${active.finishedTasks} dari ${active.totalTasks} tugas selesai</b><span>${Math.round((active.finishedTasks / active.totalTasks) * 100)}%</span></div><div class="dashboard-progress-track" role="progressbar" aria-label="Progres simulasi System Analyst" aria-valuemin="0" aria-valuemax="${active.totalTasks}" aria-valuenow="${active.finishedTasks}"><span style="width:${(active.finishedTasks / active.totalTasks) * 100}%"></span></div><p class="dashboard-next-task">Berikutnya: ${esc(taskById(active.nextTaskId)?.title || "Lanjutkan tugas")}</p>${A(continueRoute, `Lanjutkan Simulasi ${ico("arrow")}`, "primary")}</article>` : `<div class="dashboard-empty-card"><span class="dashboard-empty-icon">${ico(recent ? "check-circle" : "workflow")}</span><div><h3>${recent ? "Simulasi terakhirmu sudah selesai." : "Belum ada simulasi yang sedang kamu kerjakan."}</h3><p>${recent ? "Lihat hasil pekerjaanmu atau jelajahi posisi lain." : summary.hasAccess ? "Proyek System Analyst siap dimulai." : "Pilih simulasi yang ingin dicoba dan mulai dari langkah pertama."}</p></div><div class="dashboard-empty-actions">${A(recent ? `report${resultRoute}` : continueRoute, recent ? "Lihat Hasil" : continueLabel, "primary")}${recent ? A("explore", "Jelajahi Simulasi", "light") : ""}</div></div>`}</section>
+    <section class="dashboard-section" aria-labelledby="dashboard-recommend-title"><div class="dashboard-section-heading"><div><span class="dashboard-kicker">UNTUK KAMU</span><h2 id="dashboard-recommend-title">Rekomendasi pekerjaan</h2></div></div><div class="dashboard-recommend-grid">${summary.recommendations
+      .map(
+        ({ simulation, reason, detail }) =>
+          `<article class="dashboard-recommend-card"><span class="dashboard-recommend-icon">${ico(simulation.icon)}</span><div class="dashboard-recommend-content"><span class="dashboard-reason">${esc(reason)}</span><h3>${esc(simulation.role)}</h3><p>${esc(detail || simulation.teaser)}</p><div class="dashboard-skill-list">${simulation.skills
+            .slice(0, 3)
+            .map((skill) => `<span>${esc(skill)}</span>`)
+            .join(
+              "",
+            )}</div><div class="dashboard-recommend-bottom"><span class="dashboard-availability ${simulation.status === "ready" ? "available" : ""}">${simulation.status === "ready" ? "Tersedia" : "Pratinjau · Segera hadir"}</span><a href="#/detail/${esc(simulation.id)}">Lihat Rincian ${ico("arrow")}</a></div></div></article>`,
+      )
+      .join("")}</div></section>
+    <section class="dashboard-section" aria-labelledby="dashboard-results-title"><div class="dashboard-section-heading"><div><span class="dashboard-kicker">HASIL PEKERJAAN</span><h2 id="dashboard-results-title">Hasil simulasimu</h2></div></div><div class="dashboard-results-card">${recent ? `<div class="dashboard-results-main"><span class="dashboard-results-icon">${ico("file")}</span><div><span class="dashboard-results-status">Selesai</span><h3>System Analyst</h3><p>${esc(CASE.name)} · ${dated(submittedTask(recent.tasks.validation)?.submittedAt || recent.createdAt)}</p></div></div><div class="dashboard-results-links">${A(`report${resultRoute}`, "Laporan Kinerja", "light")}${A(`portfolio${resultRoute}`, "Portofolio", "light")}${certificateEligible(tasks, recent) ? A(`certificate${resultRoute}`, "Sertifikat", "light") : ""}</div>` : `<div class="dashboard-results-main"><span class="dashboard-results-icon">${ico("file")}</span><div><h3>Hasilmu akan tampil di sini</h3><p>Selesaikan simulasi untuk melihat laporan dan portofoliomu.</p></div></div>`}</div></section>
   </div></section>`;
 }
-const displayName=user=>user?.nickname||user?.name||'Peserta';
-const avatarTone=user=>['navy','teal','purple'].includes(user?.avatarColor)?user.avatarColor:'navy';
-function profileMenu(s){return `<details class="profile-menu"><summary aria-label="Profil ${esc(s.user.name)}"><span class="profile-avatar tone-${avatarTone(s.user)}">${esc(initials(displayName(s.user)))}</span><span class="profile-name">${esc(displayName(s.user))}</span>${ico('chevron')}</summary><div class="profile-popover"><div class="profile-heading"><span class="profile-avatar profile-avatar-large tone-${avatarTone(s.user)}">${esc(initials(displayName(s.user)))}</span><span><b>${esc(s.user.name)}</b><small>${esc(s.user.email)}</small></span></div><a href="#/profile">${ico('user')} Profil saya</a><button type="button" data-act="logout">${ico('logout')} Keluar</button></div></details>`;}
-function nav(active,s){const landing=active==='home'||active==='dashboard';return `<header class="header"><div class="container nav-wrap"><a class="brand" href="#/dashboard" aria-label="SiMagang, buka Dashboard"><span class="brand-icon">${ico('briefcase')}</span><span>Si<span class="brand-accent">Magang</span></span><span class="brand-dot"></span></a><nav class="nav-links" aria-label="Navigasi utama"><a href="#/dashboard" ${landing?'aria-current="page"':''}>Dashboard</a><a href="#/explore" ${active==='explore'?'aria-current="page"':''}>Eksplorasi</a><a href="#/progress" ${active==='progress'?'aria-current="page"':''}>Progres</a></nav><div class="nav-actions">${s.user?profileMenu(s):`<a class="btn btn-ghost btn-sm" href="#/auth">Masuk</a>`}<button class="menu-toggle" data-act="toggle-menu" aria-label="Buka menu" aria-expanded="false">${ico('menu')}</button></div></div><div class="mobile-links" id="mobile-nav" hidden><a href="#/dashboard">Dashboard</a><a href="#/explore">Eksplorasi</a><a href="#/progress">Progres</a></div></header>`;}
-function profilePage(){
-  const user=state().user;
-  const education=[user.educationLevel,user.major,user.institution].filter(Boolean).join(' · ');
-  return `<section class="container page-pad profile-page"><div class="eyebrow">AKUN SAYA</div><h1 class="page-title">Profil & personalisasi</h1><p class="page-intro">Lengkapi profilmu agar minat dan latar belakangmu tersimpan bersama hasil latihan.</p>
-    <div class="profile-layout"><aside class="content-panel profile-preview"><span class="profile-preview-label">PRATINJAU PROFIL</span><span class="profile-avatar profile-preview-avatar tone-${avatarTone(user)}">${esc(initials(displayName(user)))}</span><h2>${esc(displayName(user))}</h2><p class="profile-preview-email">${esc(user.email)}</p>${education?`<p class="profile-education">${esc(education)}</p>`:''}${user.city?`<p class="profile-city">${esc(user.city)}</p>`:''}<span class="profile-interest">${esc(simulations.find(item=>item.id===user.interest)?.role||'Belum memilih minat')}</span>${user.bio?`<p class="profile-bio">${esc(user.bio)}</p>`:'<p class="profile-bio profile-bio-empty">Tulis perkenalan singkat agar profilmu lebih personal.</p>'}</aside>
-    <form id="profile-form" class="content-panel form-stack"><section class="profile-form-section"><div class="profile-section-heading"><h2>Informasi dasar</h2><p>Nama dan email yang digunakan pada akun ini.</p></div><div class="profile-fields"><label class="work-field"><span>Nama lengkap</span><input name="name" type="text" required minlength="2" maxlength="80" autocomplete="name" value="${esc(user.name)}"></label><label class="work-field"><span>Alamat email</span><input name="email" type="email" required autocomplete="email" value="${esc(user.email)}"></label><label class="work-field"><span>Nama panggilan <small>(opsional)</small></span><input name="nickname" type="text" maxlength="30" placeholder="Nama yang tampil di Dashboard" value="${esc(user.nickname||'')}"></label><label class="work-field"><span>Kota domisili <small>(opsional)</small></span><input name="city" type="text" maxlength="80" autocomplete="address-level2" placeholder="Contoh: Bandung" value="${esc(user.city||'')}"></label></div></section>
-    <section class="profile-form-section"><div class="profile-section-heading"><h2>Pendidikan</h2><p>Tambahkan latar belakang pendidikan jika ingin ditampilkan di profil.</p></div><div class="profile-fields"><label class="work-field"><span>Nama kampus <small>(opsional)</small></span><input name="institution" type="text" maxlength="100" placeholder="Contoh: Universitas Indonesia" value="${esc(user.institution||'')}"></label><label class="work-field"><span>Program studi <small>(opsional)</small></span><input name="major" type="text" maxlength="100" placeholder="Contoh: Sistem Informasi" value="${esc(user.major||'')}"></label><label class="work-field"><span>Jenjang pendidikan <small>(opsional)</small></span><select name="educationLevel"><option value="">Pilih jenjang</option>${['D3','D4','S1','S2','S3'].map(level=>`<option value="${level}" ${user.educationLevel===level?'selected':''}>${level}</option>`).join('')}</select></label></div></section>
-    <section class="profile-form-section"><div class="profile-section-heading"><h2>Minat & tampilan</h2><p>Gunakan minatmu untuk menyesuaikan rekomendasi simulasi di Dashboard.</p></div><div class="profile-fields"><label class="work-field"><span>Posisi yang diminati <small>(opsional)</small></span><select name="interest"><option value="">Belum memilih posisi</option>${simulations.map(item=>`<option value="${esc(item.id)}" ${user.interest===item.id?'selected':''}>${esc(item.role)}</option>`).join('')}</select></label><label class="work-field profile-field-full"><span>Perkenalan singkat <small>(opsional, maks. 240 karakter)</small></span><textarea name="bio" maxlength="240" rows="3" placeholder="Ceritakan bidang yang ingin kamu pelajari atau pengalaman yang relevan.">${esc(user.bio||'')}</textarea></label></div><fieldset class="profile-colors"><legend>Warna avatar</legend>${[['navy','Biru tua'],['teal','Hijau'],['purple','Ungu']].map(([color,label])=>`<label><input type="radio" name="avatarColor" value="${color}" ${avatarTone(user)===color?'checked':''}><span class="profile-color-swatch tone-${color}"></span>${label}</label>`).join('')}</fieldset></section>
-    <p class="profile-help">Data profil dan progres hanya tersimpan di browser ini. Jika email diubah, akses dan progres akan mengikuti alamat baru.</p><button class="btn btn-primary" type="submit">Simpan profil ${ico('check')}</button></form></div></section>`;
+const displayName = (user) => user?.nickname || user?.name || "Peserta";
+const avatarTone = (user) =>
+  ["navy", "teal", "purple"].includes(user?.avatarColor)
+    ? user.avatarColor
+    : "navy";
+function profileMenu(s) {
+  return `<details class="profile-menu"><summary aria-label="Profil ${esc(s.user.name)}"><span class="profile-avatar tone-${avatarTone(s.user)}">${esc(initials(displayName(s.user)))}</span><span class="profile-name">${esc(displayName(s.user))}</span>${ico("chevron")}</summary><div class="profile-popover"><div class="profile-heading"><span class="profile-avatar profile-avatar-large tone-${avatarTone(s.user)}">${esc(initials(displayName(s.user)))}</span><span><b>${esc(s.user.name)}</b><small>${esc(s.user.email)}</small></span></div><a href="#/profile">${ico("user")} Profil saya</a><button type="button" data-act="logout">${ico("logout")} Keluar</button></div></details>`;
 }
-function frame(content,active='home',options={}){
-  const s=state();
-  return `<a class="skip-link" href="#page-content">Lewati ke konten utama</a>${nav(active,s)}<main id="page-content" class="${options.full?'main-full':'main-content'}">${content}</main>
-    <footer class="footer site-footer"><div class="container footer-inner"><div class="footer-top"><a class="brand footer-brand" href="#/dashboard" aria-label="SiMagang, ke Dashboard"><span class="brand-icon">${ico('briefcase')}</span><span>Si<span class="brand-accent">Magang</span></span></a><span>Persiapan magang melalui pengalaman kerja berbasis simulasi.</span></div>
+function nav(active, s) {
+  const landing = active === "home" || active === "dashboard";
+  return `<header class="header"><div class="container nav-wrap"><a class="brand" href="#/dashboard" aria-label="SiMagang, buka Dashboard"><span class="brand-icon">${ico("briefcase")}</span><span>Si<span class="brand-accent">Magang</span></span><span class="brand-dot"></span></a><nav class="nav-links" aria-label="Navigasi utama"><a href="#/dashboard" ${landing ? 'aria-current="page"' : ""}>Dashboard</a><a href="#/explore" ${active === "explore" ? 'aria-current="page"' : ""}>Eksplorasi</a><a href="#/progress" ${active === "progress" ? 'aria-current="page"' : ""}>Progres</a></nav><div class="nav-actions">${s.user ? profileMenu(s) : `<a class="btn btn-ghost btn-sm" href="#/auth">Masuk</a>`}<button class="menu-toggle" data-act="toggle-menu" aria-label="Buka menu" aria-expanded="false">${ico("menu")}</button></div></div><div class="mobile-links" id="mobile-nav" hidden><a href="#/dashboard">Dashboard</a><a href="#/explore">Eksplorasi</a><a href="#/progress">Progres</a></div></header>`;
+}
+function profilePage() {
+  const user = state().user;
+  const education = [user.educationLevel, user.major, user.institution]
+    .filter(Boolean)
+    .join(" · ");
+  return `<section class="container page-pad profile-page"><div class="eyebrow">AKUN SAYA</div><h1 class="page-title">Profil & personalisasi</h1><p class="page-intro">Lengkapi profilmu agar minat dan latar belakangmu tersimpan bersama hasil latihan.</p>
+    <div class="profile-layout"><aside class="content-panel profile-preview"><span class="profile-preview-label">PRATINJAU PROFIL</span><span class="profile-avatar profile-preview-avatar tone-${avatarTone(user)}">${esc(initials(displayName(user)))}</span><h2>${esc(displayName(user))}</h2><p class="profile-preview-email">${esc(user.email)}</p>${education ? `<p class="profile-education">${esc(education)}</p>` : ""}${user.city ? `<p class="profile-city">${esc(user.city)}</p>` : ""}<span class="profile-interest">${esc(simulations.find((item) => item.id === user.interest)?.role || "Belum memilih minat")}</span>${user.bio ? `<p class="profile-bio">${esc(user.bio)}</p>` : '<p class="profile-bio profile-bio-empty">Tulis perkenalan singkat agar profilmu lebih personal.</p>'}</aside>
+    <form id="profile-form" class="content-panel form-stack"><section class="profile-form-section"><div class="profile-section-heading"><h2>Informasi dasar</h2><p>Nama dan email yang digunakan pada akun ini.</p></div><div class="profile-fields"><label class="work-field"><span>Nama lengkap</span><input name="name" type="text" required minlength="2" maxlength="80" autocomplete="name" value="${esc(user.name)}"></label><label class="work-field"><span>Alamat email</span><input name="email" type="email" required autocomplete="email" value="${esc(user.email)}"></label><label class="work-field"><span>Nama panggilan <small>(opsional)</small></span><input name="nickname" type="text" maxlength="30" placeholder="Nama yang tampil di Dashboard" value="${esc(user.nickname || "")}"></label><label class="work-field"><span>Kota domisili <small>(opsional)</small></span><input name="city" type="text" maxlength="80" autocomplete="address-level2" placeholder="Contoh: Bandung" value="${esc(user.city || "")}"></label></div></section>
+    <section class="profile-form-section"><div class="profile-section-heading"><h2>Pendidikan</h2><p>Tambahkan latar belakang pendidikan jika ingin ditampilkan di profil.</p></div><div class="profile-fields"><label class="work-field"><span>Nama kampus <small>(opsional)</small></span><input name="institution" type="text" maxlength="100" placeholder="Contoh: Universitas Indonesia" value="${esc(user.institution || "")}"></label><label class="work-field"><span>Program studi <small>(opsional)</small></span><input name="major" type="text" maxlength="100" placeholder="Contoh: Sistem Informasi" value="${esc(user.major || "")}"></label><label class="work-field"><span>Jenjang pendidikan <small>(opsional)</small></span><select name="educationLevel"><option value="">Pilih jenjang</option>${["D3", "D4", "S1", "S2", "S3"].map((level) => `<option value="${level}" ${user.educationLevel === level ? "selected" : ""}>${level}</option>`).join("")}</select></label></div></section>
+    <section class="profile-form-section"><div class="profile-section-heading"><h2>Minat & tampilan</h2><p>Gunakan minatmu untuk menyesuaikan rekomendasi simulasi di Dashboard.</p></div><div class="profile-fields"><label class="work-field"><span>Posisi yang diminati <small>(opsional)</small></span><select name="interest"><option value="">Belum memilih posisi</option>${simulations.map((item) => `<option value="${esc(item.id)}" ${user.interest === item.id ? "selected" : ""}>${esc(item.role)}</option>`).join("")}</select></label><label class="work-field profile-field-full"><span>Perkenalan singkat <small>(opsional, maks. 240 karakter)</small></span><textarea name="bio" maxlength="240" rows="3" placeholder="Ceritakan bidang yang ingin kamu pelajari atau pengalaman yang relevan.">${esc(user.bio || "")}</textarea></label></div><fieldset class="profile-colors"><legend>Warna avatar</legend>${[
+      ["navy", "Biru tua"],
+      ["teal", "Hijau"],
+      ["purple", "Ungu"],
+    ]
+      .map(
+        ([color, label]) =>
+          `<label><input type="radio" name="avatarColor" value="${color}" ${avatarTone(user) === color ? "checked" : ""}><span class="profile-color-swatch tone-${color}"></span>${label}</label>`,
+      )
+      .join("")}</fieldset></section>
+    <p class="profile-help">Data profil dan progres hanya tersimpan di browser ini. Jika email diubah, akses dan progres akan mengikuti alamat baru.</p><button class="btn btn-primary" type="submit">Simpan profil ${ico("check")}</button></form></div></section>`;
+}
+function frame(content, active = "home", options = {}) {
+  const s = state();
+  return `<a class="skip-link" href="#page-content">Lewati ke konten utama</a>${nav(active, s)}<main id="page-content" class="${options.full ? "main-full" : "main-content"}">${content}</main>
+    <footer class="footer site-footer"><div class="container footer-inner"><div class="footer-top"><a class="brand footer-brand" href="#/dashboard" aria-label="SiMagang, ke Dashboard"><span class="brand-icon">${ico("briefcase")}</span><span>Si<span class="brand-accent">Magang</span></span></a><span>Persiapan magang melalui pengalaman kerja berbasis simulasi.</span></div>
       <div class="footer-columns"><div class="footer-mission"><p>Mulai dari latihan. Bangun bukti kemampuanmu.</p><small>Jelajahi peran, kerjakan tugas, dan lihat hasil pekerjaanmu.</small></div>
         <nav class="footer-column" aria-label="Navigasi peserta"><h2>Untuk Peserta</h2><a href="#/dashboard">Dashboard</a><a href="#/explore">Jelajahi Simulasi</a><a href="#/progress">Progres Saya</a></nav>
-        <nav class="footer-column" aria-label="Daftar simulasi"><h2>Simulasi</h2>${simulations.map(item=>`<a href="#/detail/${esc(item.id)}">${esc(item.role)}</a>`).join('')}</nav>
-        <nav class="footer-column" aria-label="Akun pengguna"><h2>Akun</h2>${s.user?`<a href="#/profile">Profil Saya</a><a href="#/progress">Simulasi Saya</a>`:`<a href="#/auth">Masuk</a><a href="#/register">Daftar</a>`}</nav>
+        <nav class="footer-column" aria-label="Daftar simulasi"><h2>Simulasi</h2>${simulations.map((item) => `<a href="#/detail/${esc(item.id)}">${esc(item.role)}</a>`).join("")}</nav>
+        <nav class="footer-column" aria-label="Akun pengguna"><h2>Akun</h2>${s.user ? `<a href="#/profile">Profil Saya</a><a href="#/progress">Simulasi Saya</a>` : `<a href="#/auth">Masuk</a><a href="#/register">Daftar</a>`}</nav>
         <nav class="footer-column" aria-label="Informasi SiMagang"><h2>Informasi</h2><a href="#/about">Tentang SiMagang</a><a href="#/help">Pusat Bantuan</a><a href="#/privacy">Privasi Data Demo</a></nav></div>
       <div class="footer-bottom"><span>© ${new Date().getFullYear()} SiMagang</span><span>Simulasi pembelajaran · Perusahaan dalam studi kasus bersifat fiktif</span></div></div></footer><div id="toast" role="status" aria-live="polite"></div>`;
 }
-const catalogCategory=p=>p.id==='uiux-designer'?'Desain':p.id==='digital-marketing'?'Bisnis dan Pemasaran':'Teknologi Informasi';
-function productCard(p){const c=getCompany(p.company);return `<article class="sim-card"><div class="sim-art-link">${art(p.icon)}</div><div class="sim-body"><div class="sim-brand">${logo(c)}<span>${esc(c.name)}<small>Perusahaan fiktif</small></span></div><div class="pill-row">${pill(p.status==='ready'?'Tersedia':'Segera Hadir',p.status==='ready'?'green':'gray')}${pill(catalogCategory(p),'soft')}</div><h3>${esc(p.role)}</h3><p class="sim-description">${esc(p.teaser)}</p><div class="chip-row">${p.skills.slice(0,2).map(x=>`<span class="chip">${esc(x)}</span>`).join('')}</div><div class="sim-bottom"><span class="catalog-card-meta">${p.status==='ready'?`${tasks.length} tugas · ${rupiah(p.price)}`:'Pratinjau · Belum dijual'}</span><a href="#/detail/${p.id}" class="text-link">Lihat Rincian ${ico('arrow')}</a></div></div></article>`;}
-function home(){return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><span class="hero-label">${ico('spark')} PERSIAPKAN MAGANG LEWAT PRAKTIK</span><h1>Kenali pekerjaan<br/>yang kamu minati.<br/><span>Mulai dari praktik.</span></h1><p>Jelajahi berbagai peran melalui studi kasus. Coba tugas pengantar, lihat umpan baliknya, lalu pilih proyek yang sesuai dengan minatmu.</p><div class="hero-cta">${A('explore',`Jelajahi Simulasi ${ico('arrow')}`,'primary btn-lg')}</div><div class="hero-proof"><span>${ico('check-circle')} Tugas pengantar tanpa akun</span><span>${ico('check-circle')} Umpan balik sesuai jawabanmu</span></div></div><div class="hero-visual"><div class="visual-card"><div class="visual-top"><span class="window-dots"><i></i><i></i><i></i></span><span class="visual-url">simagang.app / ruang-kerja</span></div><div class="visual-content"><div class="visual-badge">${ico('briefcase')} JUNIOR SYSTEM ANALYST</div><h3>Meeting Room Booking System</h3><p>PT Nusa Digital Solusi · Proyek latihan</p><div class="visual-message"><div class="pm-avatar">DP</div><div><b>Arahan dari Dina, Manajer Proyek</b><p>“Bantu tim mengubah keluhan pemesanan ruang menjadi kebutuhan sistem yang dapat diuji.”</p></div></div><div class="visual-progress"><div><span>Analisis Kebutuhan</span>${ico('check-circle')}</div><div><span>Cerita Pengguna & Kriteria Penerimaan</span>${ico('arrow')}</div><div><span>Validasi Kebutuhan</span><span class="light-dot"></span></div></div><div class="visual-result"><div>${ico('file')}<div><b>Hasil latihanmu</b><small>Artefak + umpan balik tugas</small></div></div><span>${ico('arrow')}</span></div></div></div><div class="float-chip floating-one">${ico('target')} Umpan balik keterampilan</div><div class="float-chip floating-two">${ico('award')} Bukti portofolio</div></div></div></section>
-  <section class="container stat-row" aria-label="Manfaat utama"><div>${ico('workflow')}<div><strong>Praktik berbasis kasus</strong><span>Kerjakan tugas dari skenario pekerjaan</span></div></div><div>${ico('refresh')}<div><strong>Umpan balik terarah</strong><span>Pahami hasil setiap tugas</span></div></div><div>${ico('file')}<div><strong>Bukti latihan</strong><span>Unduh dokumen hasil kerja</span></div></div></section>
-  <section class="section container" id="how-it-works">${sectionTitle('CARA KERJA','Kenali pekerjaan melalui praktik.','Mulai dari satu tugas pengantar, pahami umpan baliknya, lalu lanjutkan ke proyek yang ingin kamu pelajari.') }<div class="steps-grid"><div class="step-card"><span>01 · GRATIS</span><div class="step-icon">${ico('play')}</div><h3>Coba tugas pengantar</h3><p>Kerjakan satu tugas analis dari studi kasus dan lihat umpan balik berdasarkan jawabanmu, tanpa perlu membuat akun.</p></div><div class="step-card"><span>02 · PILIHANMU</span><div class="step-icon">${ico('target')}</div><h3>Tentukan langkah berikutnya</h3><p>Tinjau hasil tugas dan contoh pekerjaannya sebelum memilih simulasi lengkap.</p></div><div class="step-card"><span>03 · PROYEK</span><div class="step-icon">${ico('refresh')}</div><h3>Kerjakan dan lihat hasil</h3><p>Susun dokumen dari jawabanmu, pelajari penilaian tiap tugas, dan simpan hasil pekerjaanmu.</p></div></div></section>
-  <section class="section muted-section"><div class="container"><div class="section-top">${sectionTitle('PILIH POSISI','Mulai dari pekerjaan yang kamu incar.','Setiap simulasi dirancang sebagai pengalaman kerja berbasis kasus.')}<a class="text-link" href="#/explore">Semua posisi ${ico('arrow')}</a></div><div class="cards-grid">${simulations.slice(0,3).map(productCard).join('')}</div></div></section>
-  <section class="section container"><div class="dual-callout"><div><div class="eyebrow">HASIL LATIHANMU</div><h2>Lihat perkembanganmu dari <em>hasil pekerjaan.</em></h2><p>Setiap jawaban menjadi bagian dari dokumen latihan yang bisa kamu tinjau bersama umpan balik dan penilaiannya.</p>${A('detail/system-analyst',`Lihat simulasi System Analyst ${ico('arrow')}`,'light')}</div><div class="comparison-mini"><div class="cmp-head"><b>Contoh hasil kerja</b>${pill('Ilustrasi','gray')}</div><div><small>KEBUTUHAN UMUM</small><p>“Sebagai pengguna, saya ingin memesan ruang supaya mudah.”</p></div><div class="cmp-arrow">${ico('arrow')} Dokumen lebih spesifik</div><div class="cmp-good"><small>CONTOH ARTEFAK</small><p>“Sebagai staf, saya ingin mengecek ketersediaan ruang agar tidak terjadi benturan jadwal.”</p></div></div></div></section>
-  <section class="section container home-end"><div>${sectionTitle('MULAI SEKARANG','Temukan peran yang ingin kamu pelajari.','Lihat pilihan simulasi dan mulai dari bidang yang paling menarik bagimu.')}${A('explore',`Jelajahi Simulasi ${ico('arrow')}`,'primary btn-lg')}</div></section>`;}
-let filters={search:'',category:'all'};
-function explore(){return `<section class="container page-pad explore-page"><div class="eyebrow">KATALOG SIMULASI</div><h1 class="page-title">Jelajahi Simulasi</h1><p class="page-intro">Temukan bidang pekerjaan dan coba pengalaman kerja sesuai minatmu.</p><div class="filter-panel explore-filters"><label class="search-wrap">${ico('search')}<input id="catalog-search" type="search" placeholder="Cari posisi atau perusahaan..." value="${esc(filters.search)}" aria-label="Cari posisi atau perusahaan" /></label><label class="select-wrap">Bidang <select id="catalog-category"><option value="all">Semua</option>${['Teknologi Informasi','Desain','Bisnis dan Pemasaran'].map(category=>`<option value="${category}" ${filters.category===category?'selected':''}>${category}</option>`).join('')}</select></label></div><div id="catalog-container" aria-live="polite"></div></section>`;}
-function updateCatalog(){const c=document.getElementById('catalog-container');if(!c)return;const query=filters.search.toLowerCase().trim();const list=simulations.filter(p=>(filters.category==='all'||catalogCategory(p)===filters.category)&&([p.role,getCompany(p.company).name].join(' ').toLowerCase().includes(query)));c.innerHTML=`<div class="list-meta">${list.length} simulasi ditemukan</div>${list.length?`<div class="cards-grid">${list.map(productCard).join('')}</div>`:`<div class="empty-state">${ico('search')}<h3>Simulasi tidak ditemukan.</h3><p>Coba gunakan kata kunci atau kategori lainnya.</p><button class="btn btn-light" data-act="reset-filter">Hapus filter</button></div>`}`;}
-function detail(id){
-  const simulation=getSimulation(id);
-  if(!simulation)return notFound();
-  const company=getCompany(simulation.company),ready=simulation.status==='ready';
-  const owned=state().user?api.getMySimulations().find(item=>item.simulationId===id):null;
-  const action=ready?owned?.status==='completed'?A(`report/${encodeURIComponent(owned.attemptId)}`,`Lihat Hasil ${ico('arrow')}`,'primary btn-lg'):owned?.status==='in-progress'?A(`workspace/${owned.nextTaskId}`,`Lanjutkan Simulasi ${ico('arrow')}`,'primary btn-lg'):owned?A('welcome',`Mulai Simulasi ${ico('arrow')}`,'primary btn-lg'):A(`checkout/${id}`,`Beli Simulasi — ${rupiah(simulation.price)} ${ico('arrow')}`,'primary btn-lg'):`<button type="button" class="btn btn-light btn-lg" data-act="scroll-detail">Lihat Gambaran Simulasi ${ico('arrow')}</button>`;
-  return `<section class="container page-pad simulation-detail"><div class="breadcrumbs"><a href="#/explore">Jelajahi Simulasi</a>${ico('chevron')}<span>${esc(simulation.role)}</span></div>
-    <div class="simulation-detail-hero"><div><div class="simulation-company">${logo(company)}<span><b>${esc(company.name)}</b><small>Perusahaan fiktif</small></span></div><span class="simulation-detail-status">${ready?'Tersedia':'Segera Hadir'}</span><h1>${esc(simulation.role)}</h1><h2>${esc(ready?CASE.name:simulation.title)}</h2><p>${esc(simulation.description)}</p><div class="simulation-detail-meta"><span>${ico('layers')} ${ready?tasks.length+' tugas':'Pratinjau konsep'}</span><span>${ico('target')} ${esc(simulation.level)}</span>${ready?`<span>${ico('clock')} ${esc(simulation.duration)}</span>`:''}</div><div class="simulation-detail-price">${ready?`<strong>${rupiah(simulation.price)}</strong><small>Akses satu kali untuk proyek ini · konfirmasi akses demo</small>`:'Belum tersedia untuk dibeli'}</div><div class="simulation-detail-actions">${action}${ready?`<a class="simulation-preview-link" href="#/free">Coba 1 Tugas Gratis ${ico('arrow')}</a>`:''}</div></div><div class="simulation-detail-art">${art(simulation.icon)}<p>${esc(simulation.deliverable)}</p></div></div>
-    <section class="simulation-detail-section" id="detail-overview" aria-labelledby="detail-overview-title"><div class="eyebrow">01 · GAMBARAN UMUM</div><h2 id="detail-overview-title">Apa yang akan kamu kerjakan?</h2><div class="simulation-overview-grid"><div class="simulation-overview-main"><h3>Peran & tujuan proyek</h3><p>${ready?`Sebagai Junior System Analyst, kamu membantu tim mengubah masalah pemesanan ruang menjadi kebutuhan sistem yang jelas.`:esc(simulation.teaser)}</p>${ready?`<p>${esc(CASE.problem)}</p><p><b>Tujuan:</b> ${esc(CASE.mission)}</p>`:''}</div><div class="simulation-overview-main"><h3>Kompetensi dan alat kerja</h3><div class="chip-row">${simulation.skills.map(skill=>`<span class="chip">${esc(skill)}</span>`).join('')}</div><p><b>Alat kerja:</b> ${esc(simulation.tools.join(', '))}</p><p class="note-muted">Kerjakan tugas dengan editor SiMagang. Alat kerja eksternal dapat digunakan secara opsional.</p></div></div></section>
-    <section class="simulation-detail-section" aria-labelledby="detail-tasks-title"><div class="eyebrow">02 · DAFTAR TUGAS</div><h2 id="detail-tasks-title">Aktivitas di dalam simulasi</h2>${ready?`<div class="simulation-task-list">${tasks.map(task=>`<details class="simulation-task"><summary><span class="simulation-task-number">${String(task.number).padStart(2,'0')}</span><span><b>${esc(task.title)}</b><small>${esc(task.deliverable)}</small></span>${ico('chevron')}</summary><div class="simulation-task-body"><p>${esc(task.description)}</p><p><b>Kompetensi:</b> ${esc(simulation.skills[Math.min(task.number-1,simulation.skills.length-1)])}</p><p><b>Hasil kerja:</b> ${esc(task.deliverable)}</p></div></details>`).join('')}</div>`:`<p class="simulation-coming-note">Rangkaian tugas untuk posisi ini masih dalam pengembangan dan belum dapat dikerjakan.</p>`}</section>
-    <section class="simulation-detail-section" aria-labelledby="detail-benefits-title"><div class="eyebrow">03 · MANFAAT SIMULASI</div><h2 id="detail-benefits-title">Hasil yang kamu dapatkan</h2><div class="simulation-benefits"><ul class="check-list">${(ready?['Pengalaman mengerjakan tiga tugas dalam satu kasus','Artefak pekerjaan dari jawabanmu sendiri','Umpan balik berdasarkan rubrik per tugas','Laporan Kinerja dan portofolio','Sertifikat Penyelesaian jika memenuhi syarat']:['Gambaran posisi dan kompetensi yang akan dilatih','Pratinjau konsep simulasi tanpa pembelian']).map(item=>`<li>${ico('check-circle')} ${esc(item)}</li>`).join('')}</ul>${ready?`<div class="simulation-sample"><span class="eyebrow">CONTOH HASIL SIMULASI</span><b>User Story Specification</b><p>“Sebagai staf, saya ingin melihat ketersediaan ruang agar tidak terjadi benturan pemesanan.”</p><small>Contoh umpan balik: kebutuhan pengguna sudah spesifik dan dapat diuji. Hasil aslimu akan mengikuti jawaban yang kamu kirim.</small></div>`:''}</div></section>
+const catalogCategory = (p) =>
+  p.id === "uiux-designer"
+    ? "Desain"
+    : p.id === "digital-marketing"
+      ? "Bisnis dan Pemasaran"
+      : "Teknologi Informasi";
+function productCard(p) {
+  const c = getCompany(p.company);
+  return `<article class="sim-card"><div class="sim-art-link">${art(p.icon)}</div><div class="sim-body"><div class="sim-brand">${logo(c)}<span>${esc(c.name)}<small>Perusahaan fiktif</small></span></div><div class="pill-row">${pill(p.status === "ready" ? "Tersedia" : "Segera Hadir", p.status === "ready" ? "green" : "gray")}${pill(catalogCategory(p), "soft")}</div><h3>${esc(p.role)}</h3><p class="sim-description">${esc(p.teaser)}</p><div class="chip-row">${p.skills
+    .slice(0, 2)
+    .map((x) => `<span class="chip">${esc(x)}</span>`)
+    .join(
+      "",
+    )}</div><div class="sim-bottom"><span class="catalog-card-meta">${p.status === "ready" ? `${tasks.length} tugas · ${rupiah(p.price)}` : "Pratinjau · Belum dijual"}</span><a href="#/detail/${p.id}" class="text-link">Lihat Rincian ${ico("arrow")}</a></div></div></article>`;
+}
+function home() {
+  return `<section class="hero"><div class="container hero-grid"><div class="hero-copy"><span class="hero-label">${ico("spark")} PERSIAPKAN MAGANG LEWAT PRAKTIK</span><h1>Kenali pekerjaan<br/>yang kamu minati.<br/><span>Mulai dari praktik.</span></h1><p>Jelajahi berbagai peran melalui studi kasus. Coba tugas pengantar, lihat umpan baliknya, lalu pilih proyek yang sesuai dengan minatmu.</p><div class="hero-cta">${A("explore", `Jelajahi Simulasi ${ico("arrow")}`, "primary btn-lg")}</div><div class="hero-proof"><span>${ico("check-circle")} Tugas pengantar tanpa akun</span><span>${ico("check-circle")} Umpan balik sesuai jawabanmu</span></div></div><div class="hero-visual"><div class="visual-card"><div class="visual-top"><span class="window-dots"><i></i><i></i><i></i></span><span class="visual-url">simagang.app / ruang-kerja</span></div><div class="visual-content"><div class="visual-badge">${ico("briefcase")} JUNIOR SYSTEM ANALYST</div><h3>Meeting Room Booking System</h3><p>PT Nusa Digital Solusi · Proyek latihan</p><div class="visual-message"><div class="pm-avatar">DP</div><div><b>Arahan dari Dina, Manajer Proyek</b><p>“Bantu tim mengubah keluhan pemesanan ruang menjadi kebutuhan sistem yang dapat diuji.”</p></div></div><div class="visual-progress"><div><span>Analisis Kebutuhan</span>${ico("check-circle")}</div><div><span>Cerita Pengguna & Kriteria Penerimaan</span>${ico("arrow")}</div><div><span>Validasi Kebutuhan</span><span class="light-dot"></span></div></div><div class="visual-result"><div>${ico("file")}<div><b>Hasil latihanmu</b><small>Artefak + umpan balik tugas</small></div></div><span>${ico("arrow")}</span></div></div></div><div class="float-chip floating-one">${ico("target")} Umpan balik keterampilan</div><div class="float-chip floating-two">${ico("award")} Bukti portofolio</div></div></div></section>
+  <section class="container stat-row" aria-label="Manfaat utama"><div>${ico("workflow")}<div><strong>Praktik berbasis kasus</strong><span>Kerjakan tugas dari skenario pekerjaan</span></div></div><div>${ico("refresh")}<div><strong>Umpan balik terarah</strong><span>Pahami hasil setiap tugas</span></div></div><div>${ico("file")}<div><strong>Bukti latihan</strong><span>Unduh dokumen hasil kerja</span></div></div></section>
+  <section class="section container" id="how-it-works">${sectionTitle("CARA KERJA", "Kenali pekerjaan melalui praktik.", "Mulai dari satu tugas pengantar, pahami umpan baliknya, lalu lanjutkan ke proyek yang ingin kamu pelajari.")}<div class="steps-grid"><div class="step-card"><span>01 · GRATIS</span><div class="step-icon">${ico("play")}</div><h3>Coba tugas pengantar</h3><p>Kerjakan satu tugas analis dari studi kasus dan lihat umpan balik berdasarkan jawabanmu, tanpa perlu membuat akun.</p></div><div class="step-card"><span>02 · PILIHANMU</span><div class="step-icon">${ico("target")}</div><h3>Tentukan langkah berikutnya</h3><p>Tinjau hasil tugas dan contoh pekerjaannya sebelum memilih simulasi lengkap.</p></div><div class="step-card"><span>03 · PROYEK</span><div class="step-icon">${ico("refresh")}</div><h3>Kerjakan dan lihat hasil</h3><p>Susun dokumen dari jawabanmu, pelajari penilaian tiap tugas, dan simpan hasil pekerjaanmu.</p></div></div></section>
+  <section class="section muted-section"><div class="container"><div class="section-top">${sectionTitle("PILIH POSISI", "Mulai dari pekerjaan yang kamu incar.", "Setiap simulasi dirancang sebagai pengalaman kerja berbasis kasus.")}<a class="text-link" href="#/explore">Semua posisi ${ico("arrow")}</a></div><div class="cards-grid">${simulations.slice(0, 3).map(productCard).join("")}</div></div></section>
+  <section class="section container"><div class="dual-callout"><div><div class="eyebrow">HASIL LATIHANMU</div><h2>Lihat perkembanganmu dari <em>hasil pekerjaan.</em></h2><p>Setiap jawaban menjadi bagian dari dokumen latihan yang bisa kamu tinjau bersama umpan balik dan penilaiannya.</p>${A("detail/system-analyst", `Lihat simulasi System Analyst ${ico("arrow")}`, "light")}</div><div class="comparison-mini"><div class="cmp-head"><b>Contoh hasil kerja</b>${pill("Ilustrasi", "gray")}</div><div><small>KEBUTUHAN UMUM</small><p>“Sebagai pengguna, saya ingin memesan ruang supaya mudah.”</p></div><div class="cmp-arrow">${ico("arrow")} Dokumen lebih spesifik</div><div class="cmp-good"><small>CONTOH ARTEFAK</small><p>“Sebagai staf, saya ingin mengecek ketersediaan ruang agar tidak terjadi benturan jadwal.”</p></div></div></div></section>
+  <section class="section container home-end"><div>${sectionTitle("MULAI SEKARANG", "Temukan peran yang ingin kamu pelajari.", "Lihat pilihan simulasi dan mulai dari bidang yang paling menarik bagimu.")}${A("explore", `Jelajahi Simulasi ${ico("arrow")}`, "primary btn-lg")}</div></section>`;
+}
+let filters = { search: "", category: "all" };
+function explore() {
+  return `<section class="container page-pad explore-page"><div class="eyebrow">KATALOG SIMULASI</div><h1 class="page-title">Jelajahi Simulasi</h1><p class="page-intro">Temukan bidang pekerjaan dan coba pengalaman kerja sesuai minatmu.</p><div class="filter-panel explore-filters"><label class="search-wrap">${ico("search")}<input id="catalog-search" type="search" placeholder="Cari posisi atau perusahaan..." value="${esc(filters.search)}" aria-label="Cari posisi atau perusahaan" /></label><label class="select-wrap">Bidang <select id="catalog-category"><option value="all">Semua</option>${["Teknologi Informasi", "Desain", "Bisnis dan Pemasaran"].map((category) => `<option value="${category}" ${filters.category === category ? "selected" : ""}>${category}</option>`).join("")}</select></label></div><div id="catalog-container" aria-live="polite"></div></section>`;
+}
+function updateCatalog() {
+  const c = document.getElementById("catalog-container");
+  if (!c) return;
+  const query = filters.search.toLowerCase().trim();
+  const list = simulations.filter(
+    (p) =>
+      (filters.category === "all" || catalogCategory(p) === filters.category) &&
+      [p.role, getCompany(p.company).name]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+  );
+  c.innerHTML = `<div class="list-meta">${list.length} simulasi ditemukan</div>${list.length ? `<div class="cards-grid">${list.map(productCard).join("")}</div>` : `<div class="empty-state">${ico("search")}<h3>Simulasi tidak ditemukan.</h3><p>Coba gunakan kata kunci atau kategori lainnya.</p><button class="btn btn-light" data-act="reset-filter">Hapus filter</button></div>`}`;
+}
+function detail(id) {
+  const simulation = getSimulation(id);
+  if (!simulation) return notFound();
+  const company = getCompany(simulation.company),
+    ready = simulation.status === "ready";
+  const owned = state().user
+    ? api.getMySimulations().find((item) => item.simulationId === id)
+    : null;
+  const action = ready
+    ? owned?.status === "completed"
+      ? A(
+          `report/${encodeURIComponent(owned.attemptId)}`,
+          `Lihat Hasil ${ico("arrow")}`,
+          "primary btn-lg",
+        )
+      : owned?.status === "in-progress"
+        ? A(
+            `workspace/${owned.nextTaskId}`,
+            `Lanjutkan Simulasi ${ico("arrow")}`,
+            "primary btn-lg",
+          )
+        : owned
+          ? A("welcome", `Mulai Simulasi ${ico("arrow")}`, "primary btn-lg")
+          : A(
+              `checkout/${id}`,
+              `Beli Simulasi — ${rupiah(simulation.price)} ${ico("arrow")}`,
+              "primary btn-lg",
+            )
+    : `<button type="button" class="btn btn-light btn-lg" data-act="scroll-detail">Lihat Gambaran Simulasi ${ico("arrow")}</button>`;
+  return `<section class="container page-pad simulation-detail"><div class="breadcrumbs"><a href="#/explore">Jelajahi Simulasi</a>${ico("chevron")}<span>${esc(simulation.role)}</span></div>
+    <div class="simulation-detail-hero"><div><div class="simulation-company">${logo(company)}<span><b>${esc(company.name)}</b><small>Perusahaan fiktif</small></span></div><span class="simulation-detail-status">${ready ? "Tersedia" : "Segera Hadir"}</span><h1>${esc(simulation.role)}</h1><h2>${esc(ready ? CASE.name : simulation.title)}</h2><p>${esc(simulation.description)}</p><div class="simulation-detail-meta"><span>${ico("layers")} ${ready ? tasks.length + " tugas" : "Pratinjau konsep"}</span><span>${ico("target")} ${esc(simulation.level)}</span>${ready ? `<span>${ico("clock")} ${esc(simulation.duration)}</span>` : ""}</div><div class="simulation-detail-price">${ready ? `<strong>${rupiah(simulation.price)}</strong><small>Akses satu kali untuk proyek ini · konfirmasi akses demo</small>` : "Belum tersedia untuk dibeli"}</div><div class="simulation-detail-actions">${action}${ready ? `<a class="simulation-preview-link" href="#/free">Coba 1 Tugas Gratis ${ico("arrow")}</a>` : ""}</div></div><div class="simulation-detail-art">${art(simulation.icon)}<p>${esc(simulation.deliverable)}</p></div></div>
+    <section class="simulation-detail-section" id="detail-overview" aria-labelledby="detail-overview-title"><div class="eyebrow">01 · GAMBARAN UMUM</div><h2 id="detail-overview-title">Apa yang akan kamu kerjakan?</h2><div class="simulation-overview-grid"><div class="simulation-overview-main"><h3>Peran & tujuan proyek</h3><p>${ready ? `Sebagai Junior System Analyst, kamu membantu tim mengubah masalah pemesanan ruang menjadi kebutuhan sistem yang jelas.` : esc(simulation.teaser)}</p>${ready ? `<p>${esc(CASE.problem)}</p><p><b>Tujuan:</b> ${esc(CASE.mission)}</p>` : ""}</div><div class="simulation-overview-main"><h3>Kompetensi dan alat kerja</h3><div class="chip-row">${simulation.skills.map((skill) => `<span class="chip">${esc(skill)}</span>`).join("")}</div><p><b>Alat kerja:</b> ${esc(simulation.tools.join(", "))}</p><p class="note-muted">Kerjakan tugas dengan editor SiMagang. Alat kerja eksternal dapat digunakan secara opsional.</p></div></div></section>
+    <section class="simulation-detail-section" aria-labelledby="detail-tasks-title"><div class="eyebrow">02 · DAFTAR TUGAS</div><h2 id="detail-tasks-title">Aktivitas di dalam simulasi</h2>${ready ? `<div class="simulation-task-list">${tasks.map((task) => `<details class="simulation-task"><summary><span class="simulation-task-number">${String(task.number).padStart(2, "0")}</span><span><b>${esc(task.title)}</b><small>${esc(task.deliverable)}</small></span>${ico("chevron")}</summary><div class="simulation-task-body"><p>${esc(task.description)}</p><p><b>Kompetensi:</b> ${esc(simulation.skills[Math.min(task.number - 1, simulation.skills.length - 1)])}</p><p><b>Hasil kerja:</b> ${esc(task.deliverable)}</p></div></details>`).join("")}</div>` : `<p class="simulation-coming-note">Rangkaian tugas untuk posisi ini masih dalam pengembangan dan belum dapat dikerjakan.</p>`}</section>
+    <section class="simulation-detail-section" aria-labelledby="detail-benefits-title"><div class="eyebrow">03 · MANFAAT SIMULASI</div><h2 id="detail-benefits-title">Hasil yang kamu dapatkan</h2><div class="simulation-benefits"><ul class="check-list">${(ready ? ["Pengalaman mengerjakan tiga tugas dalam satu kasus", "Artefak pekerjaan dari jawabanmu sendiri", "Umpan balik berdasarkan rubrik per tugas", "Laporan Kinerja dan portofolio", "Sertifikat Penyelesaian jika memenuhi syarat"] : ["Gambaran posisi dan kompetensi yang akan dilatih", "Pratinjau konsep simulasi tanpa pembelian"]).map((item) => `<li>${ico("check-circle")} ${esc(item)}</li>`).join("")}</ul>${ready ? `<div class="simulation-sample"><span class="eyebrow">CONTOH HASIL SIMULASI</span><b>User Story Specification</b><p>“Sebagai staf, saya ingin melihat ketersediaan ruang agar tidak terjadi benturan pemesanan.”</p><small>Contoh umpan balik: kebutuhan pengguna sudah spesifik dan dapat diuji. Hasil aslimu akan mengikuti jawaban yang kamu kirim.</small></div>` : ""}</div></section>
   </section>`;
 }
-function optionInput(f,current){if(f.type==='textarea')return `<label class="work-field"><span>${esc(f.label)} <small style="color:#8b99ac;font-weight:500">· Dicatat pada portofolio, tidak dinilai otomatis</small></span><textarea data-answer="${f.id}" name="${f.id}" rows="4" minlength="${f.minlength||1}" required placeholder="${esc(f.placeholder||'Tuliskan hasil analisismu...')}">${esc(current||'')}</textarea></label>`;if(f.type==='multi'){const v=Array.isArray(current)?current:[];return `<fieldset class="work-field"><legend>${esc(f.label)}</legend><div class="checkbox-grid">${f.options.map(([val,label])=>`<label class="check-option"><input type="checkbox" data-answer="${f.id}" name="${f.id}" value="${esc(val)}" ${v.includes(val)?'checked':''}/><span>${esc(label)}</span></label>`).join('')}</div></fieldset>`;}
-return `<label class="work-field"><span>${esc(f.label)}</span><select data-answer="${f.id}" name="${f.id}" required>${f.options.map(([val,label])=>`<option value="${esc(val)}" ${val===(current||'')?'selected':''} ${!val?'disabled':''}>${esc(label)}</option>`).join('')}</select></label>`;}
-function free(){const pre=api.getFree()?.answers||{};return `<section class="challenge-page"><div class="container challenge-container"><div class="breadcrumbs"><a href="#/detail/system-analyst">System Analyst</a>${ico('chevron')}<span>Latihan Pekerjaan Gratis</span></div><div class="challenge-head"><div>${pill('100% Gratis · Tanpa akun','green')}<h1>Mulai dari tugas pekerjaan nyata.</h1><p>Bayangkan kamu adalah Junior System Analyst. Manajer Proyek meminta keputusan awal untuk masalah peminjaman ruang rapat.</p></div><div class="challenge-time">${ico('clock')} ± 5 menit</div></div><div class="challenge-layout"><div class="challenge-main"><div class="pm-card"><span class="avatar">DP</span><div><span class="pm-meta">PESAN DARI MANAJER PROYEK</span><b>${esc(CASE.pm)}</b><p>“Sebelum kita membuat sistem, bantu saya menentukan kebutuhan, prioritas, dan cara pengujiannya. Berikan keputusan terbaikmu!”</p></div></div><div class="content-panel challenge-form-card"><div class="eyebrow">LATIHAN PEKERJAAN #00</div><h2>${esc(freeTask.title)}</h2><div class="quoted-case">${esc(freeTask.prompt)}</div><form id="free-task-form" class="form-stack">${freeTask.fields.map(f=>optionInput(f,pre[f.id])).join('')}<div class="form-foot"><span>${ico('shield')} Penilaian hanya untuk tiga keputusan ini, bukan kesiapan kerja keseluruhan.</span><button class="btn btn-primary" type="submit">Kirim Keputusan ${ico('arrow')}</button></div></form></div></div><aside class="side-help"><div class="help-card"><div class="eyebrow">YANG AKAN KAMU DAPAT</div><h3>Umpan balik yang menjelaskan alasannya.</h3><ul class="check-list"><li>${ico('check-circle')} Skor berdasarkan jawabanmu</li><li>${ico('check-circle')} Penjelasan untuk setiap keputusan</li><li>${ico('check-circle')} Contoh tindak lanjut yang relevan</li></ul><p>Semua hasil tugas ini tetap gratis, termasuk apabila jawabannya belum tepat.</p></div><div class="hint-card">${ico('info')} <span>Jawaban tidak disimpan sebagai data penelitian. Dalam demo, riwayat hanya disimpan di browser yang kamu pakai.</span></div></aside></div></div></section>`;}
-function feedbackList(assessment,showMax=true){return `<div class="feedback-items">${assessment.breakdown.map((b,i)=>`<div class="feedback-item ${b.correct?'feedback-ok':'feedback-improve'}"><span class="feedback-status">${ico(b.correct?'check-circle':'alert')}</span><div><div class="feedback-top"><b>Aspek ${i+1}</b><span>${b.earned}/${b.max}${showMax?' poin':''}</span></div><p class="feedback-field-label">${esc(b.label)}</p><p>${esc(b.feedback)}</p></div></div>`).join('')}</div>`;}
-function resultFree(){
-  const freeResult=api.getFree();
-  if(!freeResult)return `<section class="container page-pad empty-state">${ico('clipboard')}<h2>Belum ada hasil tugas gratis</h2>${A('free','Coba tugas gratis')}</section>`;
-  const assessment=freeResult.assessment,weak=assessment.breakdown.filter(item=>!item.correct);
-  const owned=state().user?api.getMySimulations().find(item=>item.simulationId==='system-analyst'):null;
-  const nextRoute=owned?.status==='completed'?`report/${encodeURIComponent(owned.attemptId)}`:owned?.status==='in-progress'?`workspace/${owned.nextTaskId}`:owned?'welcome':'checkout/system-analyst';
-  const nextLabel=owned?.status==='completed'?'Lihat Hasil Simulasi':owned?'Lanjutkan Simulasi':`Lanjutkan ke Proyek Lengkap — ${rupiah(getSimulation('system-analyst').price)}`;
-  return `<section class="container page-pad free-result-page"><div class="breadcrumbs"><a href="#/free">Tugas Gratis</a>${ico('chevron')}<span>Umpan Balik</span></div><header class="result-title"><div><div class="eyebrow">HASIL LATIHAN GRATIS</div><h1>Ini hasil keputusan pertamamu.</h1><p>Penilaian hanya mencakup tiga keputusan pada kasus kecil ini. Lihat alasan di tiap aspek sebelum menentukan langkah berikutnya.</p></div><div class="score-orb"><strong>${assessment.score}</strong><small>/ 100 poin tugas</small></div></header><div class="result-grid"><div><article class="content-panel"><h2>Yang sudah tepat dan perlu ditingkatkan</h2>${feedbackList(assessment)}</article><article class="content-panel"><h2>${weak.length?'Ada aspek yang bisa kamu latih lagi.':'Keputusan awalmu sudah sesuai pada kasus ini.'}</h2><p>${weak.length?`${weak.length} dari 3 aspek belum sesuai kriteria kasus. Umpan balik ini tidak mengukur kesiapan magang secara keseluruhan.`:'Ketiga keputusan sudah sesuai. Proyek lengkap menambah latihan menyusun dokumen dan validasi kebutuhan.'}</p><div class="mini-artifact"><b>${ico('file')} Catatan keputusanmu</b>${freeTask.fields.map(field=>`<div><small>${esc(field.label)}</small><span>${esc(fieldName(field,freeResult.answers[field.id]))}</span></div>`).join('')}</div></article></div><aside><div class="offer-card"><div class="offer-head">LANGKAH BERIKUTNYA · OPSIONAL</div><h2>Dari pratinjau ke proyek lengkap</h2><div class="preview-value-grid"><div><b>Pratinjau gratis</b><p>1 kasus kecil · 1 aktivitas · umpan balik dasar.</p></div><div><b>Proyek lengkap</b><p>3 tugas berkaitan · artefakmu · penilaian · laporan · portofolio · sertifikat jika memenuhi syarat.</p></div></div>${A(nextRoute,`${esc(nextLabel)} ${ico('arrow')}`,'primary btn-block')}<a class="offer-dismiss" href="#/detail/system-analyst">Kembali ke Rincian</a></div></aside></div></section>`;
+function optionInput(f, current) {
+  if (f.type === "textarea")
+    return `<label class="work-field"><span>${esc(f.label)} <small style="color:#8b99ac;font-weight:500">· Dicatat pada portofolio, tidak dinilai otomatis</small></span><textarea data-answer="${f.id}" name="${f.id}" rows="4" minlength="${f.minlength || 1}" required placeholder="${esc(f.placeholder || "Tuliskan hasil analisismu...")}">${esc(current || "")}</textarea></label>`;
+  if (f.type === "multi") {
+    const v = Array.isArray(current) ? current : [];
+    return `<fieldset class="work-field"><legend>${esc(f.label)}</legend><div class="checkbox-grid">${f.options.map(([val, label]) => `<label class="check-option"><input type="checkbox" data-answer="${f.id}" name="${f.id}" value="${esc(val)}" ${v.includes(val) ? "checked" : ""}/><span>${esc(label)}</span></label>`).join("")}</div></fieldset>`;
+  }
+  return `<label class="work-field"><span>${esc(f.label)}</span><select data-answer="${f.id}" name="${f.id}" required>${f.options.map(([val, label]) => `<option value="${esc(val)}" ${val === (current || "") ? "selected" : ""} ${!val ? "disabled" : ""}>${esc(label)}</option>`).join("")}</select></label>`;
 }
-function auth(mode='login'){
-  const registering=mode==='register';
-  return `<section class="auth-page"><div class="container auth-shell"><div class="auth-card"><div class="eyebrow">AKUN SIMAGANG</div><h1>${registering?'Daftar untuk mulai belajar.':'Selamat datang kembali.'}</h1><p>${registering?'Buat identitas demo untuk menyimpan progres latihan di browser ini.':'Masuk dengan identitas demo yang pernah kamu buat di browser ini.'}</p>
-    <nav class="auth-switch" aria-label="Pilihan akses akun"><a href="#/auth" ${!registering?'aria-current="page"':''}>Masuk</a><a href="#/register" ${registering?'aria-current="page"':''}>Daftar</a></nav>
-    <form id="${registering?'demo-register-form':'demo-auth-form'}" class="form-stack">${registering?`<label class="work-field"><span>Nama lengkap</span><input type="text" name="name" required minlength="2" maxlength="80" autocomplete="name" placeholder="Contoh: Andi Pratama" /></label>`:''}<label class="work-field"><span>Alamat email</span><input type="email" name="email" required autocomplete="email" placeholder="nama@contoh.com" /></label><button type="submit" class="btn btn-primary btn-block">${registering?'Daftar dan Lanjutkan':'Masuk dan Lanjutkan'} ${ico('arrow')}</button></form>
-    <div class="auth-demo-note" role="note">${ico('shield')}<p>Mode demo: tidak memakai kata sandi atau verifikasi email. Gunakan email contoh; data akun dan progres hanya tersimpan di browser ini.</p></div><a class="auth-back" href="#/explore">${ico('arrow')} Kembali jelajahi simulasi</a></div>
-    <aside class="auth-side"><div class="eyebrow">MULAI DARI PEKERJAAN NYATA</div><h2>Latihan yang menghasilkan bukti pekerjaan.</h2><p>Kerjakan studi kasus, pahami masukan, lalu simpan hasil latihanmu.</p><div class="auth-benefit">${ico('briefcase')}<div><b>Satu proyek yang terarah</b><p>Tiga tugas analis sistem dalam satu kasus yang saling berkaitan.</p></div></div><div class="auth-benefit">${ico('target')}<div><b>Penilaian yang jelas</b><p>Umpan balik berasal dari jawaban dan rubrik setiap tugas.</p></div></div><div class="auth-benefit">${ico('file')}<div><b>Hasil yang bisa dibuka kembali</b><p>Laporan kinerja dan dokumen latihan tersimpan bersama progresmu.</p></div></div></aside></div></section>`;
+function free() {
+  const pre = api.getFree()?.answers || {};
+  return `<section class="challenge-page"><div class="container challenge-container"><div class="breadcrumbs"><a href="#/detail/system-analyst">System Analyst</a>${ico("chevron")}<span>Latihan Pekerjaan Gratis</span></div><div class="challenge-head"><div>${pill("100% Gratis · Tanpa akun", "green")}<h1>Mulai dari tugas pekerjaan nyata.</h1><p>Bayangkan kamu adalah Junior System Analyst. Manajer Proyek meminta keputusan awal untuk masalah peminjaman ruang rapat.</p></div><div class="challenge-time">${ico("clock")} ± 5 menit</div></div><div class="challenge-layout"><div class="challenge-main"><div class="pm-card"><span class="avatar">DP</span><div><span class="pm-meta">PESAN DARI MANAJER PROYEK</span><b>${esc(CASE.pm)}</b><p>“Sebelum kita membuat sistem, bantu saya menentukan kebutuhan, prioritas, dan cara pengujiannya. Berikan keputusan terbaikmu!”</p></div></div><div class="content-panel challenge-form-card"><div class="eyebrow">LATIHAN PEKERJAAN #00</div><h2>${esc(freeTask.title)}</h2><div class="quoted-case">${esc(freeTask.prompt)}</div><form id="free-task-form" class="form-stack">${freeTask.fields.map((f) => optionInput(f, pre[f.id])).join("")}<div class="form-foot"><span>${ico("shield")} Penilaian hanya untuk tiga keputusan ini, bukan kesiapan kerja keseluruhan.</span><button class="btn btn-primary" type="submit">Kirim Keputusan ${ico("arrow")}</button></div></form></div></div><aside class="side-help"><div class="help-card"><div class="eyebrow">YANG AKAN KAMU DAPAT</div><h3>Umpan balik yang menjelaskan alasannya.</h3><ul class="check-list"><li>${ico("check-circle")} Skor berdasarkan jawabanmu</li><li>${ico("check-circle")} Penjelasan untuk setiap keputusan</li><li>${ico("check-circle")} Contoh tindak lanjut yang relevan</li></ul><p>Semua hasil tugas ini tetap gratis, termasuk apabila jawabannya belum tepat.</p></div><div class="hint-card">${ico("info")} <span>Jawaban tidak disimpan sebagai data penelitian. Dalam demo, riwayat hanya disimpan di browser yang kamu pakai.</span></div></aside></div></div></section>`;
 }
-function informationPage(kind){
-  const pages={
-    about:{label:'TENTANG SIMAGANG',title:'Latihan kerja sebelum magang.',intro:'SiMagang membantu mahasiswa mengenal pekerjaan melalui simulasi tugas berbasis studi kasus.',items:[['Apa yang dapat dicoba?','Jelajahi posisi pekerjaan, coba latihan singkat, lalu pilih simulasi lengkap jika ingin mengerjakan proyek terstruktur.'],['Apa hasil latihannya?','Jawaban yang dikirim membentuk dokumen pekerjaan, umpan balik berdasarkan rubrik, dan laporan kinerja simulasi.'],['Apakah ini magang resmi?','Bukan. Perusahaan dalam studi kasus bersifat fiktif dan sertifikat hanya menyatakan penyelesaian simulasi.']]},
-    help:{label:'PUSAT BANTUAN',title:'Bantuan menggunakan SiMagang.',intro:'Jawaban singkat untuk langkah yang paling sering dibutuhkan peserta.',items:[['Bagaimana memulai?','Buka Jelajahi Simulasi, pilih posisi, lalu baca rincian proyek. Latihan gratis dapat dicoba tanpa akun.'],['Bagaimana menyimpan progres?','Daftar dengan identitas demo, konfirmasi akses simulasi, lalu kerjakan tugas secara berurutan. Draf tersimpan di browser yang sama.'],['Apakah pembelian demo menagih uang?','Tidak. Konfirmasi pembelian pada versi ini hanya mengaktifkan akses simulasi di browser; tidak ada transaksi uang nyata.'],['Di mana hasil saya?','Buka Progres Saya. Setelah semua tugas selesai, laporan kinerja dan portofolio tersedia dari halaman hasil.']]},
-    privacy:{label:'PRIVASI DATA DEMO',title:'Data latihan tersimpan di browsermu.',intro:'Versi ini menggunakan penyimpanan lokal browser untuk identitas demo, akses simulasi, draf, dan hasil tugas.',items:[['Data apa yang disimpan?','Nama dan email demo, pengaturan profil, jawaban latihan, progres, serta catatan aktivasi akses demo.'],['Apakah data tersinkron ke akun daring?','Belum. Data tidak berpindah otomatis ke perangkat atau browser lain. Jangan masukkan data pribadi sensitif.'],['Bagaimana menghapusnya?','Setelah masuk, gunakan tindakan Hapus data demo pada Dashboard. Menghapus data situs melalui pengaturan browser juga akan menghapus progres lokal.']]}
+function feedbackList(assessment, showMax = true) {
+  return `<div class="feedback-items">${assessment.breakdown.map((b, i) => `<div class="feedback-item ${b.correct ? "feedback-ok" : "feedback-improve"}"><span class="feedback-status">${ico(b.correct ? "check-circle" : "alert")}</span><div><div class="feedback-top"><b>Aspek ${i + 1}</b><span>${b.earned}/${b.max}${showMax ? " poin" : ""}</span></div><p class="feedback-field-label">${esc(b.label)}</p><p>${esc(b.feedback)}</p></div></div>`).join("")}</div>`;
+}
+function resultFree() {
+  const freeResult = api.getFree();
+  if (!freeResult)
+    return `<section class="container page-pad empty-state">${ico("clipboard")}<h2>Belum ada hasil tugas gratis</h2>${A("free", "Coba tugas gratis")}</section>`;
+  const assessment = freeResult.assessment,
+    weak = assessment.breakdown.filter((item) => !item.correct);
+  const owned = state().user
+    ? api
+        .getMySimulations()
+        .find((item) => item.simulationId === "system-analyst")
+    : null;
+  const nextRoute =
+    owned?.status === "completed"
+      ? `report/${encodeURIComponent(owned.attemptId)}`
+      : owned?.status === "in-progress"
+        ? `workspace/${owned.nextTaskId}`
+        : owned
+          ? "welcome"
+          : "checkout/system-analyst";
+  const nextLabel =
+    owned?.status === "completed"
+      ? "Lihat Hasil Simulasi"
+      : owned
+        ? "Lanjutkan Simulasi"
+        : `Lanjutkan ke Proyek Lengkap — ${rupiah(getSimulation("system-analyst").price)}`;
+  return `<section class="container page-pad free-result-page"><div class="breadcrumbs"><a href="#/free">Tugas Gratis</a>${ico("chevron")}<span>Umpan Balik</span></div><header class="result-title"><div><div class="eyebrow">HASIL LATIHAN GRATIS</div><h1>Ini hasil keputusan pertamamu.</h1><p>Penilaian hanya mencakup tiga keputusan pada kasus kecil ini. Lihat alasan di tiap aspek sebelum menentukan langkah berikutnya.</p></div><div class="score-orb"><strong>${assessment.score}</strong><small>/ 100 poin tugas</small></div></header><div class="result-grid"><div><article class="content-panel"><h2>Yang sudah tepat dan perlu ditingkatkan</h2>${feedbackList(assessment)}</article><article class="content-panel"><h2>${weak.length ? "Ada aspek yang bisa kamu latih lagi." : "Keputusan awalmu sudah sesuai pada kasus ini."}</h2><p>${weak.length ? `${weak.length} dari 3 aspek belum sesuai kriteria kasus. Umpan balik ini tidak mengukur kesiapan magang secara keseluruhan.` : "Ketiga keputusan sudah sesuai. Proyek lengkap menambah latihan menyusun dokumen dan validasi kebutuhan."}</p><div class="mini-artifact"><b>${ico("file")} Catatan keputusanmu</b>${freeTask.fields.map((field) => `<div><small>${esc(field.label)}</small><span>${esc(fieldName(field, freeResult.answers[field.id]))}</span></div>`).join("")}</div></article></div><aside><div class="offer-card"><div class="offer-head">LANGKAH BERIKUTNYA · OPSIONAL</div><h2>Dari pratinjau ke proyek lengkap</h2><div class="preview-value-grid"><div><b>Pratinjau gratis</b><p>1 kasus kecil · 1 aktivitas · umpan balik dasar.</p></div><div><b>Proyek lengkap</b><p>3 tugas berkaitan · artefakmu · penilaian · laporan · portofolio · sertifikat jika memenuhi syarat.</p></div></div>${A(nextRoute, `${esc(nextLabel)} ${ico("arrow")}`, "primary btn-block")}<a class="offer-dismiss" href="#/detail/system-analyst">Kembali ke Rincian</a></div></aside></div></section>`;
+}
+function auth(mode = "login") {
+  const registering = mode === "register";
+  return `<section class="auth-page"><div class="container auth-shell"><div class="auth-card"><div class="eyebrow">AKUN SIMAGANG</div><h1>${registering ? "Daftar untuk mulai belajar." : "Selamat datang kembali."}</h1><p>${registering ? "Buat identitas demo untuk menyimpan progres latihan di browser ini." : "Masuk dengan identitas demo yang pernah kamu buat di browser ini."}</p>
+    <nav class="auth-switch" aria-label="Pilihan akses akun"><a href="#/auth" ${!registering ? 'aria-current="page"' : ""}>Masuk</a><a href="#/register" ${registering ? 'aria-current="page"' : ""}>Daftar</a></nav>
+    <form id="${registering ? "demo-register-form" : "demo-auth-form"}" class="form-stack">${registering ? `<label class="work-field"><span>Nama lengkap</span><input type="text" name="name" required minlength="2" maxlength="80" autocomplete="name" placeholder="Contoh: Andi Pratama" /></label>` : ""}<label class="work-field"><span>Alamat email</span><input type="email" name="email" required autocomplete="email" placeholder="nama@contoh.com" /></label><button type="submit" class="btn btn-primary btn-block">${registering ? "Daftar dan Lanjutkan" : "Masuk dan Lanjutkan"} ${ico("arrow")}</button></form>
+    <div class="auth-demo-note" role="note">${ico("shield")}<p>Mode demo: tidak memakai kata sandi atau verifikasi email. Gunakan email contoh; data akun dan progres hanya tersimpan di browser ini.</p></div><a class="auth-back" href="#/explore">${ico("arrow")} Kembali jelajahi simulasi</a></div>
+    <aside class="auth-side"><div class="eyebrow">MULAI DARI PEKERJAAN NYATA</div><h2>Latihan yang menghasilkan bukti pekerjaan.</h2><p>Kerjakan studi kasus, pahami masukan, lalu simpan hasil latihanmu.</p><div class="auth-benefit">${ico("briefcase")}<div><b>Satu proyek yang terarah</b><p>Tiga tugas analis sistem dalam satu kasus yang saling berkaitan.</p></div></div><div class="auth-benefit">${ico("target")}<div><b>Penilaian yang jelas</b><p>Umpan balik berasal dari jawaban dan rubrik setiap tugas.</p></div></div><div class="auth-benefit">${ico("file")}<div><b>Hasil yang bisa dibuka kembali</b><p>Laporan kinerja dan dokumen latihan tersimpan bersama progresmu.</p></div></div></aside></div></section>`;
+}
+function informationPage(kind) {
+  const pages = {
+    about: {
+      label: "TENTANG SIMAGANG",
+      title: "Latihan kerja sebelum magang.",
+      intro:
+        "SiMagang membantu mahasiswa mengenal pekerjaan melalui simulasi tugas berbasis studi kasus.",
+      items: [
+        [
+          "Apa yang dapat dicoba?",
+          "Jelajahi posisi pekerjaan, coba latihan singkat, lalu pilih simulasi lengkap jika ingin mengerjakan proyek terstruktur.",
+        ],
+        [
+          "Apa hasil latihannya?",
+          "Jawaban yang dikirim membentuk dokumen pekerjaan, umpan balik berdasarkan rubrik, dan laporan kinerja simulasi.",
+        ],
+        [
+          "Apakah ini magang resmi?",
+          "Bukan. Perusahaan dalam studi kasus bersifat fiktif dan sertifikat hanya menyatakan penyelesaian simulasi.",
+        ],
+      ],
+    },
+    help: {
+      label: "PUSAT BANTUAN",
+      title: "Bantuan menggunakan SiMagang.",
+      intro:
+        "Jawaban singkat untuk langkah yang paling sering dibutuhkan peserta.",
+      items: [
+        [
+          "Bagaimana memulai?",
+          "Buka Jelajahi Simulasi, pilih posisi, lalu baca rincian proyek. Latihan gratis dapat dicoba tanpa akun.",
+        ],
+        [
+          "Bagaimana menyimpan progres?",
+          "Daftar dengan identitas demo, konfirmasi akses simulasi, lalu kerjakan tugas secara berurutan. Draf tersimpan di browser yang sama.",
+        ],
+        [
+          "Apakah pembelian demo menagih uang?",
+          "Tidak. Konfirmasi pembelian pada versi ini hanya mengaktifkan akses simulasi di browser; tidak ada transaksi uang nyata.",
+        ],
+        [
+          "Di mana hasil saya?",
+          "Buka Progres Saya. Setelah semua tugas selesai, laporan kinerja dan portofolio tersedia dari halaman hasil.",
+        ],
+      ],
+    },
+    privacy: {
+      label: "PRIVASI DATA DEMO",
+      title: "Data latihan tersimpan di browsermu.",
+      intro:
+        "Versi ini menggunakan penyimpanan lokal browser untuk identitas demo, akses simulasi, draf, dan hasil tugas.",
+      items: [
+        [
+          "Data apa yang disimpan?",
+          "Nama dan email demo, pengaturan profil, jawaban latihan, progres, serta catatan aktivasi akses demo.",
+        ],
+        [
+          "Apakah data tersinkron ke akun daring?",
+          "Belum. Data tidak berpindah otomatis ke perangkat atau browser lain. Jangan masukkan data pribadi sensitif.",
+        ],
+        [
+          "Bagaimana menghapusnya?",
+          "Setelah masuk, gunakan tindakan Hapus data demo pada Dashboard. Menghapus data situs melalui pengaturan browser juga akan menghapus progres lokal.",
+        ],
+      ],
+    },
   };
-  const page=pages[kind];if(!page)return notFound();
-  return `<section class="container page-pad information-page"><div class="eyebrow">${page.label}</div><h1>${page.title}</h1><p class="page-intro">${page.intro}</p><div class="information-list">${page.items.map(([title,body])=>`<article class="content-panel"><h2>${title}</h2><p>${body}</p></article>`).join('')}</div><a class="btn btn-primary" href="#/explore">Jelajahi Simulasi ${ico('arrow')}</a></section>`;
+  const page = pages[kind];
+  if (!page) return notFound();
+  return `<section class="container page-pad information-page"><div class="eyebrow">${page.label}</div><h1>${page.title}</h1><p class="page-intro">${page.intro}</p><div class="information-list">${page.items.map(([title, body]) => `<article class="content-panel"><h2>${title}</h2><p>${body}</p></article>`).join("")}</div><a class="btn btn-primary" href="#/explore">Jelajahi Simulasi ${ico("arrow")}</a></section>`;
 }
-function checkout(id){
-  const simulation=getSimulation(id);
-  if(!simulation||simulation.status!=='ready')return notFound();
-  const company=getCompany(simulation.company);
-  return `<section class="container page-pad checkout-page"><div class="breadcrumbs"><a href="#/detail/${esc(id)}">Rincian Simulasi</a>${ico('chevron')}<span>Konfirmasi Akses</span></div><div class="eyebrow">AKSES SATU SIMULASI</div><h1 class="page-title">Konfirmasi akses proyekmu.</h1><p class="page-intro">Periksa isi simulasi sebelum mengaktifkan akses demonstrasi.</p><div class="checkout-grid"><div class="content-panel"><h2>System Analyst · ${esc(CASE.name)}</h2><p>${esc(company.name)} · Perusahaan fiktif</p><ul class="check-list">${['3 tugas dalam satu proyek','Artefak dari jawabanmu sendiri','Umpan balik dan penilaian berdasarkan rubrik','Laporan Kinerja dan portofolio','Sertifikat Penyelesaian jika memenuhi syarat'].map(item=>`<li>${ico('check-circle')} ${esc(item)}</li>`).join('')}</ul><div class="sample-doc small-sample"><div><b>${ico('file')} Contoh Hasil Simulasi</b></div><p>Requirements Register, User Story Specification, dan Validation Log akan dibuat dari pekerjaan yang kamu kirim.</p></div></div><aside><div class="purchase-panel checkout-summary"><div class="eyebrow">RINGKASAN PEMBELIAN</div><h3>${esc(simulation.role)}</h3><p>${esc(CASE.name)}</p><div class="checkout-line"><span>Harga satu kali</span><b>${rupiah(simulation.price)}</b></div><div class="checkout-line total"><span>Total pembayaran demo</span><b>${rupiah(simulation.price)}</b></div><div class="checkout-demo-warning" role="note">${ico('info')} <span>Ini adalah simulasi pembayaran untuk keperluan demonstrasi. Tidak ada transaksi uang nyata.</span></div><form id="demo-checkout-form"><label class="work-field"><span>Metode pembayaran ilustratif</span><select name="method" required><option value="qris">QRIS (demo)</option><option value="ewallet">E-Wallet (demo)</option><option value="va">Virtual Account (demo)</option></select></label><button class="btn btn-primary btn-block" type="submit">Konfirmasi Pembelian Demo ${ico('arrow')}</button></form></div></aside></div></section>`;
+function checkout(id) {
+  const simulation = getSimulation(id);
+  if (!simulation || simulation.status !== "ready") return notFound();
+  const company = getCompany(simulation.company);
+  return `<section class="container page-pad checkout-page"><div class="breadcrumbs"><a href="#/detail/${esc(id)}">Rincian Simulasi</a>${ico("chevron")}<span>Konfirmasi Akses</span></div><div class="eyebrow">AKSES SATU SIMULASI</div><h1 class="page-title">Konfirmasi akses proyekmu.</h1><p class="page-intro">Periksa isi simulasi sebelum mengaktifkan akses demonstrasi.</p><div class="checkout-grid"><div class="content-panel"><h2>System Analyst · ${esc(CASE.name)}</h2><p>${esc(company.name)} · Perusahaan fiktif</p><ul class="check-list">${["3 tugas dalam satu proyek", "Artefak dari jawabanmu sendiri", "Umpan balik dan penilaian berdasarkan rubrik", "Laporan Kinerja dan portofolio", "Sertifikat Penyelesaian jika memenuhi syarat"].map((item) => `<li>${ico("check-circle")} ${esc(item)}</li>`).join("")}</ul><div class="sample-doc small-sample"><div><b>${ico("file")} Contoh Hasil Simulasi</b></div><p>Requirements Register, User Story Specification, dan Validation Log akan dibuat dari pekerjaan yang kamu kirim.</p></div></div><aside><div class="purchase-panel checkout-summary"><div class="eyebrow">RINGKASAN PEMBELIAN</div><h3>${esc(simulation.role)}</h3><p>${esc(CASE.name)}</p><div class="checkout-line"><span>Harga satu kali</span><b>${rupiah(simulation.price)}</b></div><div class="checkout-line total"><span>Total pembayaran demo</span><b>${rupiah(simulation.price)}</b></div><div class="checkout-demo-warning" role="note">${ico("info")} <span>Ini adalah simulasi pembayaran untuk keperluan demonstrasi. Tidak ada transaksi uang nyata.</span></div><form id="demo-checkout-form"><label class="work-field"><span>Metode pembayaran ilustratif</span><select name="method" required><option value="qris">QRIS (demo)</option><option value="ewallet">E-Wallet (demo)</option><option value="va">Virtual Account (demo)</option></select></label><button class="btn btn-primary btn-block" type="submit">Konfirmasi Pembelian Demo ${ico("arrow")}</button></form></div></aside></div></section>`;
 }
-function welcome(){
-  const attempt=currentAttempt(),done=attempt&&completion(tasks,attempt);
-  const label=done?'Lihat Hasil':attempt?'Lanjutkan Simulasi':'Mulai Tugas Pertama';
-  return `<section class="container page-pad"><div class="onboard"><div class="eyebrow">PENGANTAR PROYEK</div><h1>Meeting Room Booking System</h1><p>Peranmu: Junior System Analyst di PT Nusa Digital Solusi, perusahaan fiktif. Bantu tim merumuskan kebutuhan sistem agar dua tim tidak memesan ruang rapat pada waktu yang sama.</p><div class="pm-card onboard-pm"><span class="avatar">DP</span><div><span class="pm-meta">MANAJER PROYEK · ${esc(CASE.pm.toUpperCase())}</span><b>“Selamat datang di tim. Kami membutuhkan bantuanmu untuk menganalisis kebutuhan sistem peminjaman ruang rapat agar tidak terjadi benturan jadwal.”</b><p>${esc(CASE.mission)}</p></div></div><div class="onboard-tasks">${tasks.map(task=>`<div><span>${task.number}</span><div><b>${esc(task.title)}</b><small>${esc(task.deliverable)}</small></div>${ico('chevron')}</div>`).join('')}</div><div class="onboard-actions"><button class="btn btn-primary btn-lg" data-act="start-work">${label} ${ico('arrow')}</button></div><p class="note-muted">Jawaban dan progres proyek tersimpan di browser ini.</p></div></section>`;
+function welcome() {
+  const attempt = currentAttempt(),
+    done = attempt && completion(tasks, attempt);
+  const label = done
+    ? "Lihat Hasil"
+    : attempt
+      ? "Lanjutkan Simulasi"
+      : "Mulai Tugas Pertama";
+  return `<section class="container page-pad"><div class="onboard"><div class="eyebrow">PENGANTAR PROYEK</div><h1>Meeting Room Booking System</h1><p>Peranmu: Junior System Analyst di PT Nusa Digital Solusi, perusahaan fiktif. Bantu tim merumuskan kebutuhan sistem agar dua tim tidak memesan ruang rapat pada waktu yang sama.</p><div class="pm-card onboard-pm"><span class="avatar">DP</span><div><span class="pm-meta">MANAJER PROYEK · ${esc(CASE.pm.toUpperCase())}</span><b>“Selamat datang di tim. Kami membutuhkan bantuanmu untuk menganalisis kebutuhan sistem peminjaman ruang rapat agar tidak terjadi benturan jadwal.”</b><p>${esc(CASE.mission)}</p></div></div><div class="onboard-tasks">${tasks.map((task) => `<div><span>${task.number}</span><div><b>${esc(task.title)}</b><small>${esc(task.deliverable)}</small></div>${ico("chevron")}</div>`).join("")}</div><div class="onboard-actions"><button class="btn btn-primary btn-lg" data-act="start-work">${label} ${ico("arrow")}</button></div><p class="note-muted">Jawaban dan progres proyek tersimpan di browser ini.</p></div></section>`;
 }
-function artifact(config,answers={}){if(config.id==='requirements')return `<div class="artifact-doc"><div class="artifact-doc-title">REQUIREMENTS REGISTER <span>#SA-01</span></div><table><thead><tr><th>Kebutuhan stakeholder</th><th>Klasifikasi</th></tr></thead><tbody>${config.fields.filter(x=>x.id!=='priority'&&x.type!=='textarea').map(f=>`<tr><td>${esc(f.label.replaceAll('"',''))}</td><td>${esc(fieldName(f,answers[f.id]))}</td></tr>`).join('')}</tbody></table><p><b>Prioritas MVP:</b> ${esc(fieldName(config.fields.find(f=>f.id==='priority'),answers.priority))}</p><div class="artifact-record"><b>Memo analis (ditulis peserta, tidak dinilai otomatis)</b><p>${esc(answers.analystNote||'Belum ditulis')}</p></div></div>`;
-if(config.id==='userstory'){const [actor,action,benefit,criteria]=config.fields;return `<div class="artifact-doc"><div class="artifact-doc-title">USER STORY SPECIFICATION <span>#SA-02</span></div><p class="artifact-highlight">Sebagai <b>${esc(fieldName(actor,answers.actor).toLowerCase())}</b>, saya ingin <b>${esc(fieldName(action,answers.action).toLowerCase())}</b>, agar <b>${esc(fieldName(benefit,answers.benefit).toLowerCase())}</b>.</p><b>Acceptance Criteria</b><ol>${(answers.criteria||[]).length?(answers.criteria||[]).map(v=>`<li>${esc(getOptionLabel(criteria,v))}</li>`).join(''):'<li>Belum ditentukan</li>'}</ol><div class="artifact-record"><b>Catatan User Story yang ditulis peserta (tidak di-skor otomatis)</b><p>${esc(answers.draftStory||'Belum ditulis')}</p></div></div>`;}
-if(config.id==='validation')return `<div class="artifact-doc"><div class="artifact-doc-title">REQUIREMENT VALIDATION LOG <span>#SA-03</span></div>${config.fields.map(f=>`<div class="artifact-record"><b>${esc(f.label)}</b><p>${esc(fieldName(f,answers[f.id]))}</p></div>`).join('')}</div>`;
-return `<div class="artifact-doc">Belum ada artefak.</div>`;}
-function taskSidebar(active,attempt){return `<aside class="work-sidebar"><div class="work-sidebar-intro"><div class="eyebrow">RUANG KERJA</div><h3>Meeting Room<br/>Booking System</h3><p>PT Nusa Digital Solusi · Fiktif</p></div><div class="work-tasks-nav">${tasks.map(t=>{const done=!!submittedTask(attempt.tasks[t.id]),allowed=canTask(t,attempt);return `<a href="${allowed?'#/workspace/'+t.id:'#'}" ${!allowed?'aria-disabled="true" data-locked="true"':''} class="work-nav-item ${active===t.id?'active':''} ${done?'done':''} ${!allowed?'locked':''}"><span class="work-num">${done?ico('check'):t.number}</span><span><b>${esc(t.title)}</b><small>${done?'Selesai':allowed?'Siap dikerjakan':'Terkunci'}</small></span></a>`;}).join('')}</div><div class="work-help">${ico('info')} <span>Jawaban tersimpan otomatis di browser. Penilaian dilakukan saat kamu mengirim tugas.</span></div></aside>`;}
-function scoreTag(score){return `<span class="score-pill ${score>=70?'score-good':score>=40?'score-mid':'score-low'}">${score}/100</span>`;}
-function taskFeedback(config,snapshot){return `<div class="task-feedback"><div class="task-feedback-header"><div><div class="eyebrow">RUBRIK EVALUASI · ${esc(snapshot.assessment.rubricVersion)}</div><h3>Hasil tugas: ${scoreTag(snapshot.assessment.score)}</h3><p>Penilaian dihitung dari jawaban yang kamu kirim. Baca masukan untuk memahami hasilnya.</p><button type="button" class="text-link workspace-artifact-link" data-act="scroll-artifact">Lihat hasil pekerjaan ${ico('arrow')}</button></div>${ico('clipboard')}</div>${feedbackList(snapshot.assessment)}</div>`;}
+function artifact(config, answers = {}) {
+  if (config.id === "requirements")
+    return `<div class="artifact-doc"><div class="artifact-doc-title">REQUIREMENTS REGISTER <span>#SA-01</span></div><table><thead><tr><th>Kebutuhan stakeholder</th><th>Klasifikasi</th></tr></thead><tbody>${config.fields
+      .filter((x) => x.id !== "priority" && x.type !== "textarea")
+      .map(
+        (f) =>
+          `<tr><td>${esc(f.label.replaceAll('"', ""))}</td><td>${esc(fieldName(f, answers[f.id]))}</td></tr>`,
+      )
+      .join("")}</tbody></table><p><b>Prioritas MVP:</b> ${esc(
+      fieldName(
+        config.fields.find((f) => f.id === "priority"),
+        answers.priority,
+      ),
+    )}</p><div class="artifact-record"><b>Memo analis (ditulis peserta, tidak dinilai otomatis)</b><p>${esc(answers.analystNote || "Belum ditulis")}</p></div></div>`;
+  if (config.id === "userstory") {
+    const [actor, action, benefit, criteria] = config.fields;
+    return `<div class="artifact-doc"><div class="artifact-doc-title">USER STORY SPECIFICATION <span>#SA-02</span></div><p class="artifact-highlight">Sebagai <b>${esc(fieldName(actor, answers.actor).toLowerCase())}</b>, saya ingin <b>${esc(fieldName(action, answers.action).toLowerCase())}</b>, agar <b>${esc(fieldName(benefit, answers.benefit).toLowerCase())}</b>.</p><b>Acceptance Criteria</b><ol>${(answers.criteria || []).length ? (answers.criteria || []).map((v) => `<li>${esc(getOptionLabel(criteria, v))}</li>`).join("") : "<li>Belum ditentukan</li>"}</ol><div class="artifact-record"><b>Catatan User Story yang ditulis peserta (tidak di-skor otomatis)</b><p>${esc(answers.draftStory || "Belum ditulis")}</p></div></div>`;
+  }
+  if (config.id === "validation")
+    return `<div class="artifact-doc"><div class="artifact-doc-title">REQUIREMENT VALIDATION LOG <span>#SA-03</span></div>${config.fields.map((f) => `<div class="artifact-record"><b>${esc(f.label)}</b><p>${esc(fieldName(f, answers[f.id]))}</p></div>`).join("")}</div>`;
+  return `<div class="artifact-doc">Belum ada artefak.</div>`;
+}
+function taskSidebar(active, attempt) {
+  return `<aside class="work-sidebar"><div class="work-sidebar-intro"><div class="eyebrow">RUANG KERJA</div><h3>Meeting Room<br/>Booking System</h3><p>PT Nusa Digital Solusi · Fiktif</p></div><div class="work-tasks-nav">${tasks
+    .map((t) => {
+      const done = !!submittedTask(attempt.tasks[t.id]),
+        allowed = canTask(t, attempt);
+      return `<a href="${allowed ? "#/workspace/" + t.id : "#"}" ${!allowed ? 'aria-disabled="true" data-locked="true"' : ""} class="work-nav-item ${active === t.id ? "active" : ""} ${done ? "done" : ""} ${!allowed ? "locked" : ""}"><span class="work-num">${done ? ico("check") : t.number}</span><span><b>${esc(t.title)}</b><small>${done ? "Selesai" : allowed ? "Siap dikerjakan" : "Terkunci"}</small></span></a>`;
+    })
+    .join(
+      "",
+    )}</div><div class="work-help">${ico("info")} <span>Jawaban tersimpan otomatis di browser. Penilaian dilakukan saat kamu mengirim tugas.</span></div></aside>`;
+}
+function scoreTag(score) {
+  return `<span class="score-pill ${score >= 70 ? "score-good" : score >= 40 ? "score-mid" : "score-low"}">${score}/100</span>`;
+}
+function taskFeedback(config, snapshot) {
+  return `<div class="task-feedback"><div class="task-feedback-header"><div><div class="eyebrow">RUBRIK EVALUASI · ${esc(snapshot.assessment.rubricVersion)}</div><h3>Hasil tugas: ${scoreTag(snapshot.assessment.score)}</h3><p>Penilaian dihitung dari jawaban yang kamu kirim. Baca masukan untuk memahami hasilnya.</p><button type="button" class="text-link workspace-artifact-link" data-act="scroll-artifact">Lihat hasil pekerjaan ${ico("arrow")}</button></div>${ico("clipboard")}</div>${feedbackList(snapshot.assessment)}</div>`;
+}
 
-function workspace(id){
-  const config=taskById(id)||tasks[0],attempt=currentAttempt();
-  if(!attempt)return `<section class="container page-pad empty-state"><h2>Mulai simulasi terlebih dahulu</h2>${A('welcome','Kembali ke briefing')}</section>`;
-  if(!canTask(config,attempt))return `<section class="container page-pad empty-state"><h2>Tugas belum terbuka</h2><p>Selesaikan tugas sebelumnya.</p>${A('workspace/'+tasks[0].id,'Kembali ke tugas awal')}</section>`;
-  const data=attempt.tasks[id]||{draft:{}},submission=submittedTask(data),draft=data.draft||{},next=tasks[config.number],finished=tasks.filter(task=>submittedTask(attempt.tasks[task.id])).length;
-  const feedback=submission?.assessment?.breakdown||[],correctCount=feedback.filter(item=>item.correct).length;
-  return `<section class="workspace-shell container-wide">${taskSidebar(config.id,attempt)}<div class="work-main"><div class="breadcrumbs work-crumb"><a href="#/dashboard">Dashboard</a>${ico('chevron')}<a href="#/progress">Progres Saya</a>${ico('chevron')}<span>Tugas ${config.number} dari ${tasks.length}</span></div><div class="work-header"><div><div class="eyebrow">TUGAS ${String(config.number).padStart(2,'0')} · ${esc(config.kicker.toUpperCase())}</div><h1>${esc(config.title)}</h1><p>${esc(config.description)}</p></div><div class="work-duration">${ico('clock')} ${esc(config.readTime)}</div></div><div class="workspace-progress"><div><b>Progres proyek</b><span>${finished} dari ${tasks.length} tugas selesai</span></div><div class="dashboard-progress-track" role="progressbar" aria-label="Progres tugas proyek" aria-valuenow="${finished}" aria-valuemin="0" aria-valuemax="${tasks.length}"><span style="width:${finished/tasks.length*100}%"></span></div></div><div class="workspace-context"><div class="pm-card compact-pm"><span class="avatar">DP</span><div><span class="pm-meta">PENGANTAR · ${esc(CASE.pm.toUpperCase())}</span><p>${esc(config.briefing)}</p></div></div><div class="workspace-support"><b>Data pendukung</b><p>${esc(CASE.problem)}</p><b>Instruksi pekerjaan</b><p>${esc(config.description)} Hasilkan ${esc(config.deliverable)} dari keputusanmu.</p></div></div>
-  ${submission?`<div class="workspace-finished-note">${ico('check-circle')} Tugas selesai · Hasil pengiriman tersimpan</div>${taskFeedback(config,submission)}<div class="workspace-feedback-summary"><span>${ico('check-circle')} ${correctCount} aspek sudah sesuai</span><span>${ico('target')} ${feedback.length-correctCount} aspek perlu ditingkatkan</span></div><section class="content-panel artifact-preview" id="submitted-artifact"><div class="eyebrow">DOKUMEN HASIL KERJA</div><h2>${esc(config.deliverable)}</h2>${artifact(config,submission.answers)}</section><div class="work-complete-actions">${next?A('workspace/'+next.id,`Lanjut ke Tugas Berikutnya ${ico('arrow')}`,'primary btn-lg'):A('report/'+attempt.id,`Lihat Laporan Kinerja ${ico('arrow')}`,'primary btn-lg')}${A('progress','Lihat Progres','light')}</div>`:`<div class="content-panel work-editor"><div class="editor-head"><div><div class="eyebrow">RUANG KERJA · TUGAS ${config.number}</div><h2>Susun ${esc(config.deliverable)}</h2><p>Lengkapi keputusan di bawah. Jawabanmu akan membentuk dokumen hasil kerja.</p></div><span class="autosave" id="autosave">${ico('check-circle')} Draf tersimpan otomatis</span></div><form id="task-work-form" data-task="${esc(config.id)}" class="form-stack">${config.fields.map(field=>optionInput(field,draft[field.id])).join('')}<div class="form-foot"><span>${ico('shield')} Tinjau jawaban sebelum dikirim. Tugas dinilai satu kali.</span><div class="workspace-form-actions"><button type="button" class="btn btn-light" data-act="save-work-draft">Simpan Draf</button><button type="submit" class="btn btn-primary">Kirim Tugas ${ico('arrow')}</button></div></div></form></div><section class="content-panel artifact-preview"><div class="eyebrow">PRATINJAU DOKUMEN</div><h2>${esc(config.deliverable)}</h2><p>Dokumen berikut dibentuk dari jawabanmu.</p><div id="live-artifact">${artifact(config,draft)}</div><div class="inline-actions"><button class="btn btn-outline" data-act="download-current" data-task="${esc(config.id)}">${ico('download')} Unduh Draf (.md)</button>${config.id==='userstory'?`<a class="btn btn-light" href="https://app.diagrams.net/" target="_blank" rel="noopener noreferrer">${ico('external')} Coba diagrams.net (opsional)</a>`:''}</div><p class="note-muted">Diagram dari alat kerja eksternal tidak dinilai secara otomatis.</p></section>`}</div></section>`;
+function workspace(id) {
+  const config = taskById(id) || tasks[0],
+    attempt = currentAttempt();
+  if (!attempt)
+    return `<section class="container page-pad empty-state"><h2>Mulai simulasi terlebih dahulu</h2>${A("welcome", "Kembali ke briefing")}</section>`;
+  if (!canTask(config, attempt))
+    return `<section class="container page-pad empty-state"><h2>Tugas belum terbuka</h2><p>Selesaikan tugas sebelumnya.</p>${A("workspace/" + tasks[0].id, "Kembali ke tugas awal")}</section>`;
+  const data = attempt.tasks[id] || { draft: {} },
+    submission = submittedTask(data),
+    draft = data.draft || {},
+    next = tasks[config.number],
+    finished = tasks.filter((task) =>
+      submittedTask(attempt.tasks[task.id]),
+    ).length;
+  const feedback = submission?.assessment?.breakdown || [],
+    correctCount = feedback.filter((item) => item.correct).length;
+  return `<section class="workspace-shell container-wide">${taskSidebar(config.id, attempt)}<div class="work-main"><div class="breadcrumbs work-crumb"><a href="#/dashboard">Dashboard</a>${ico("chevron")}<a href="#/progress">Progres Saya</a>${ico("chevron")}<span>Tugas ${config.number} dari ${tasks.length}</span></div><div class="work-header"><div><div class="eyebrow">TUGAS ${String(config.number).padStart(2, "0")} · ${esc(config.kicker.toUpperCase())}</div><h1>${esc(config.title)}</h1><p>${esc(config.description)}</p></div><div class="work-duration">${ico("clock")} ${esc(config.readTime)}</div></div><div class="workspace-progress"><div><b>Progres proyek</b><span>${finished} dari ${tasks.length} tugas selesai</span></div><div class="dashboard-progress-track" role="progressbar" aria-label="Progres tugas proyek" aria-valuenow="${finished}" aria-valuemin="0" aria-valuemax="${tasks.length}"><span style="width:${(finished / tasks.length) * 100}%"></span></div></div><div class="workspace-context"><div class="pm-card compact-pm"><span class="avatar">DP</span><div><span class="pm-meta">PENGANTAR · ${esc(CASE.pm.toUpperCase())}</span><p>${esc(config.briefing)}</p></div></div><div class="workspace-support"><b>Data pendukung</b><p>${esc(CASE.problem)}</p><b>Instruksi pekerjaan</b><p>${esc(config.description)} Hasilkan ${esc(config.deliverable)} dari keputusanmu.</p></div></div>
+  ${submission ? `<div class="workspace-finished-note">${ico("check-circle")} Tugas selesai · Hasil pengiriman tersimpan</div>${taskFeedback(config, submission)}<div class="workspace-feedback-summary"><span>${ico("check-circle")} ${correctCount} aspek sudah sesuai</span><span>${ico("target")} ${feedback.length - correctCount} aspek perlu ditingkatkan</span></div><section class="content-panel artifact-preview" id="submitted-artifact"><div class="eyebrow">DOKUMEN HASIL KERJA</div><h2>${esc(config.deliverable)}</h2>${artifact(config, submission.answers)}</section><div class="work-complete-actions">${next ? A("workspace/" + next.id, `Lanjut ke Tugas Berikutnya ${ico("arrow")}`, "primary btn-lg") : A("report/" + attempt.id, `Lihat Laporan Kinerja ${ico("arrow")}`, "primary btn-lg")}${A("progress", "Lihat Progres", "light")}</div>` : `<div class="content-panel work-editor"><div class="editor-head"><div><div class="eyebrow">RUANG KERJA · TUGAS ${config.number}</div><h2>Susun ${esc(config.deliverable)}</h2><p>Lengkapi keputusan di bawah. Jawabanmu akan membentuk dokumen hasil kerja.</p></div><span class="autosave" id="autosave">${ico("check-circle")} Draf tersimpan otomatis</span></div><form id="task-work-form" data-task="${esc(config.id)}" class="form-stack">${config.fields.map((field) => optionInput(field, draft[field.id])).join("")}<div class="form-foot"><span>${ico("shield")} Tinjau jawaban sebelum dikirim. Tugas dinilai satu kali.</span><div class="workspace-form-actions"><button type="button" class="btn btn-light" data-act="save-work-draft">Simpan Draf</button><button type="submit" class="btn btn-primary">Kirim Tugas ${ico("arrow")}</button></div></div></form></div><section class="content-panel artifact-preview"><div class="eyebrow">PRATINJAU DOKUMEN</div><h2>${esc(config.deliverable)}</h2><p>Dokumen berikut dibentuk dari jawabanmu.</p><div id="live-artifact">${artifact(config, draft)}</div><div class="inline-actions"><button class="btn btn-outline" data-act="download-current" data-task="${esc(config.id)}">${ico("download")} Unduh Draf (.md)</button>${config.id === "userstory" ? `<a class="btn btn-light" href="https://app.diagrams.net/" target="_blank" rel="noopener noreferrer">${ico("external")} Coba diagrams.net (opsional)</a>` : ""}</div><p class="note-muted">Diagram dari alat kerja eksternal tidak dinilai secara otomatis.</p></section>`}</div></section>`;
 }
-function getReport(attemptId){const a=attemptId?api.getAttempt(attemptId):currentAttempt();if(!a||!completion(tasks,a))return null;return {a,score:weightedScore(tasks,a),eligible:certificateEligible(tasks,a)};}
-function incompletePage(title){const a=currentAttempt();return `<section class="container page-pad empty-state">${ico('lock')}<h1>${esc(title)}</h1><p>Selesaikan semua tugas untuk melihat hasil lengkap.</p>${A(a?'workspace/'+(tasks.find(t=>!submittedTask(a.tasks[t.id]))?.id||'requirements'):'welcome',`Lanjutkan Simulasi ${ico('arrow')}`,'primary')}</section>`;}
-function report(attemptId){
-  const result=getReport(attemptId),suffix=attemptId?`/${encodeURIComponent(attemptId)}`:'';
-  if(!result)return incompletePage('Laporan Kinerja belum tersedia');
-  return `<section class="container page-pad report-page"><div class="breadcrumbs"><a href="#/dashboard">Dashboard</a>${ico('chevron')}<span>Laporan Kinerja</span></div><div class="report-hero"><div><div class="eyebrow">LAPORAN KINERJA SIMULASI</div><h1>Hasil kerja <span>proyekmu.</span></h1><p>${esc(CASE.name)} · PT Nusa Digital Solusi · Perusahaan fiktif</p><span class="report-complete-status">${ico('check-circle')} Selesai · ${tasks.length} tugas dikirim</span></div><div class="report-icon">${ico('chart')}</div></div><div class="report-summary"><div><span>RATA-RATA TERTIMBANG</span><strong>${result.score}<small>/100</small></strong></div><div><span>TUGAS SELESAI</span><strong>${tasks.length}<small>/${tasks.length}</small></strong></div></div><div class="report-actions">${A('portfolio'+suffix,`Buka Portofolio ${ico('file')}`,'primary')}${result.eligible?A('certificate'+suffix,`Lihat Sertifikat ${ico('award')}`,'outline'):''}<button class="btn btn-light" data-act="download-report">${ico('download')} Unduh Laporan (.md)</button></div><div class="report-card-list">${tasks.map(task=>{const submission=submittedTask(result.a.tasks[task.id]);return `<article class="content-panel report-task"><div class="report-task-head"><div><div class="eyebrow">TUGAS ${task.number} · ${esc(task.deliverable.toUpperCase())}</div><h2>${esc(task.title)}</h2></div>${scoreTag(submission.assessment.score)}</div><p class="report-task-intro">Penilaian per aspek</p><ul class="report-rubric-list">${submission.assessment.breakdown.map(item=>`<li><b>${esc(item.label)}</b><span>${item.earned}/${item.max}</span><p>${esc(item.feedback)}</p></li>`).join('')}</ul>${A('portfolio'+suffix,`Lihat ${esc(task.deliverable)} ${ico('arrow')}`,'light')}</article>`;}).join('')}</div><div class="report-bottom-note">${ico('shield')} <span>Skor berasal dari jawaban yang dikirim dan rubrik ${esc(RUBRIC_VERSION)}. Bobot tugas: ${tasks.map(task=>task.weight+'%').join(' / ')}. Hasil ini menggambarkan performa pada simulasi, bukan jaminan kesiapan kerja.</span></div></section>`;
+function getReport(attemptId) {
+  const a = attemptId ? api.getAttempt(attemptId) : currentAttempt();
+  if (!a || !completion(tasks, a)) return null;
+  return {
+    a,
+    score: weightedScore(tasks, a),
+    eligible: certificateEligible(tasks, a),
+  };
 }
-function portfolio(attemptId){
-  const result=getReport(attemptId),suffix=attemptId?`/${encodeURIComponent(attemptId)}`:'';
-  if(!result)return incompletePage('Portofolio belum tersedia');
-  return `<section class="container page-pad portfolio-page"><div class="breadcrumbs"><a href="#/dashboard">Dashboard</a>${ico('chevron')}<a href="#/report${suffix}">Laporan</a>${ico('chevron')}<span>Portofolio Latihan</span></div><div class="portfolio-title"><div><div class="eyebrow">BUKTI PORTOFOLIO</div><h1>Dokumen hasil kerja <span>${esc(state().user?.name||'Peserta')}</span></h1><p>Junior System Analyst · ${esc(CASE.name)} · PT Nusa Digital Solusi (perusahaan fiktif)</p></div><button class="btn btn-primary" data-act="download-portfolio">${ico('download')} Unduh Portofolio (.md)</button></div><div class="content-panel portfolio-skills"><h2>Kompetensi yang dipraktikkan</h2><div class="chip-row">${getSimulation('system-analyst').skills.map(skill=>`<span class="chip">${esc(skill)}</span>`).join('')}</div><p>Artefak berikut dibuat dari jawaban yang benar-benar kamu kirim dalam simulasi.</p></div>${tasks.map(task=>{const submission=submittedTask(result.a.tasks[task.id]);return `<article class="content-panel portfolio-section"><div class="portfolio-section-header"><div><div class="eyebrow">ARTEFAK ${String(task.number).padStart(2,'0')}</div><h2>${esc(task.deliverable)}</h2></div>${scoreTag(submission.assessment.score)}</div>${artifact(task,submission.answers)}</article>`;}).join('')}<div class="portfolio-footer">${A('report'+suffix,`${ico('arrow')} Kembali ke Laporan`,'light')}${result.eligible?A('certificate'+suffix,`Lihat Sertifikat ${ico('award')}`,'outline'):''}</div></section>`;
+function incompletePage(title) {
+  const a = currentAttempt();
+  return `<section class="container page-pad empty-state">${ico("lock")}<h1>${esc(title)}</h1><p>Selesaikan semua tugas untuk melihat hasil lengkap.</p>${A(a ? "workspace/" + (tasks.find((t) => !submittedTask(a.tasks[t.id]))?.id || "requirements") : "welcome", `Lanjutkan Simulasi ${ico("arrow")}`, "primary")}</section>`;
 }
-function certificate(attemptId){const r=getReport(attemptId),suffix=attemptId?`/${encodeURIComponent(attemptId)}`:``;if(!r)return incompletePage('Sertifikat belum tersedia');if(!r.eligible)return `<section class="container page-pad"><div class="empty-state">${ico('alert')}<h1>Sertifikat belum dapat diterbitkan</h1><p>Semua tugas selesai, tetapi rata-rata nilai ${r.score}/100 masih di bawah ambang 70/100. Kamu tetap bisa mengunduh portofolio dan laporan. Untuk mencoba lagi, mulai percobaan baru.</p><div class="inline-actions">${A('report'+suffix,'Lihat Hasil','outline')}${A('portfolio'+suffix,'Unduh Portofolio','light')}<button class="btn btn-primary" data-act="new-attempt">Coba Proyek Lagi ${ico('refresh')}</button></div></div></section>`;const user=state().user,id='SIM-DEMO-'+r.a.id.split('_').pop().toUpperCase();return `<section class="container page-pad certificate-page"><div class="breadcrumbs"><a href="#/report${suffix}">Laporan Kinerja</a>${ico('chevron')}<span>Sertifikat</span></div><div class="certificate-header"><div><div class="eyebrow">BUKTI PENYELESAIAN</div><h1>Sertifikat penyelesaian latihanmu.</h1><p>Diterbitkan setelah ketiga tugas selesai dengan skor akhir memenuhi ambang latihan.</p></div><div class="inline-actions"><button class="btn btn-primary" data-act="download-certificate">${ico('download')} Unduh Sertifikat (.svg)</button><button class="btn btn-outline" data-act="print">${ico('file')} Cetak</button></div></div><div class="certificate-paper" id="certificate-paper"><div class="cert-border"><div class="cert-brand">${ico('briefcase')} SiMagang</div><div class="cert-label">CERTIFICATE OF COMPLETION</div><p class="cert-given">Diberikan kepada</p><h2>${esc(user?.name||'Peserta')}</h2><div class="cert-line"></div><p class="cert-descr">Atas penyelesaian simulasi proyek pembelajaran</p><h3>Junior System Analyst · Requirement Analysis & Validation</h3><p class="cert-descr">Menyelesaikan tiga tugas dan evaluasi terstruktur pada proyek latihan Meeting Room Booking System.</p><div class="cert-metadata"><div><small>SKOR AKHIR</small><strong>${r.score}/100</strong></div><div><small>TANGGAL PENYELESAIAN</small><strong>${dated(submittedTask(r.a.tasks.validation).submittedAt)}</strong></div><div><small>ID SERTIFIKAT</small><strong>${esc(id)}</strong></div></div><p class="cert-foot">Sertifikat latihan · Bukan sertifikasi profesi atau bukti pengalaman magang resmi.</p></div></div></section>`;}
-function notFound(){return `<section class="container page-pad empty-state">${ico('search')}<h1>Halaman tidak ditemukan</h1><p>Periksa alamat atau kembali ke katalog.</p>${A('explore',`Kembali ke katalog ${ico('arrow')}`,'primary')}</section>`;}
-function formatReport(attemptId){const r=getReport(attemptId);if(!r)return '';const s=state();let out=`# LAPORAN KINERJA SIMAGANG\n\nNama: ${s.user?.name||'-'}\nPosisi: Junior System Analyst\nProyek: ${CASE.name}\nRubrik: ${RUBRIC_VERSION}\nSkor akhir: ${r.score}/100\n\n`;for(const t of tasks){const p=submittedTask(r.a.tasks[t.id]);out+=`## ${t.title}\nBobot: ${t.weight}%\nSkor: ${p.assessment.score}/100\n`;for(const b of p.assessment.breakdown)out+=`- ${b.label}: ${b.earned}/${b.max} — ${b.feedback}\n`;out+='\n';}return out;}
-function formatPortfolio(attemptId){const r=getReport(attemptId);if(!r)return '';const s=state();let out=`# PORTOFOLIO LATIHAN SIMAGANG\n\nPeserta: ${s.user?.name||'-'}\nProyek: ${CASE.name}\nTanggal: ${dated(r.a.createdAt)}\n\n`;for(const t of tasks){const p=submittedTask(r.a.tasks[t.id]);out+=`## ${t.number}. ${t.deliverable} — ${p.assessment.score}/100\n\n`;for(const f of t.fields)out+=`- ${f.label}\n  ${fieldName(f,p.answers[f.id])}\n`;out+='\n';}return out;}
-function downloadCertificate(attemptId){const r=getReport(attemptId);if(!r?.eligible)return;const s=state();const safeSvg=v=>String(v??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]));const id='SIM-DEMO-'+r.a.id.split('_').pop().toUpperCase();const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850"><rect width="1200" height="850" fill="#f8faff"/><rect x="38" y="38" width="1124" height="774" rx="18" fill="#fff" stroke="#17305C" stroke-width="4"/><rect x="56" y="56" width="1088" height="738" rx="11" fill="none" stroke="#c6d6ed" stroke-width="2"/><text x="600" y="141" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#17305C">SiMagang</text><text x="600" y="213" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" fill="#537099" letter-spacing="5">CERTIFICATE OF COMPLETION</text><text x="600" y="287" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#63738c">Diberikan kepada</text><text x="600" y="362" text-anchor="middle" font-family="Arial,sans-serif" font-size="48" font-weight="bold" fill="#17305C">${safeSvg(s.user?.name||'Peserta')}</text><path d="M360 387H840" stroke="#d6a448" stroke-width="3"/><text x="600" y="449" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" fill="#63738c">Atas penyelesaian simulasi proyek pembelajaran</text><text x="600" y="504" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-weight="bold" fill="#17305C">Junior System Analyst</text><text x="600" y="543" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" fill="#537099">Requirement Analysis &amp; Validation</text><text x="600" y="618" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" fill="#17305C">Skor akhir: ${r.score}/100  |  ${safeSvg(dated(submittedTask(r.a.tasks.validation).submittedAt))}</text><text x="600" y="669" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#63738c">ID Demo: ${safeSvg(id)}</text><text x="600" y="738" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" fill="#b05548">SERTIFIKAT LATIHAN — BUKAN SERTIFIKASI PROFESI ATAU MAGANG RESMI</text></svg>`;downloadText('SiMagang-Sertifikat-DEMO.svg',svg,'image/svg+xml;charset=utf-8');}
-function toast(message){const el=document.getElementById('toast');if(!el)return;el.textContent=message;el.classList.add('toast-on');clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>el.classList.remove('toast-on'),4200);}
-function readForm(form,config){const obj={};for(const field of config.fields){if(field.type==='multi'){obj[field.id]=[...form.querySelectorAll(`input[name="${field.id}"]:checked`)].map(i=>i.value);}else{obj[field.id]=form.elements[field.id]?.value||'';}}return obj;}
-function onRoute(){render(true);}
-function render(scroll=false){const value=route();const [name,id]=value.split('/');const s=state();const signedDashboard=name==='dashboard'&&!!s.user;const protectedRoutes=['checkout','welcome','workspace','report','portfolio','certificate','profile'];if(protectedRoutes.includes(name)&&!s.user){setPending(value);go('auth');return;}if(['welcome','workspace','report','portfolio','certificate'].includes(name)&&!api.hasAccess('system-analyst')){go('checkout/system-analyst');return;}if(name==='checkout'&&s.user&&api.hasAccess(id)){const owned=api.getMySimulations().find(item=>item.simulationId===id);go(owned?.status==='completed'?`report/${owned.attemptId}`:owned?.status==='in-progress'?`workspace/${owned.nextTaskId}`:'welcome');return;}if(['auth','register'].includes(name)&&s.user){go(takePending());return;}let view;switch(name){case 'home':view=home();break;case 'dashboard':view=signedDashboard?dashboard():home();break;case 'explore':view=explore();break;case 'detail':view=detail(id);break;case 'free':view=free();break;case 'free-result':view=resultFree();break;case 'auth':view=auth();break;case 'register':view=auth('register');break;case 'about':view=informationPage('about');break;case 'help':view=informationPage('help');break;case 'privacy':view=informationPage('privacy');break;case 'checkout':view=checkout(id);break;case 'welcome':view=welcome();break;case 'workspace':view=workspace(id);break;case 'progress':view=progressPage();break;case 'profile':view=profilePage();break;case 'report':view=report(id);break;case 'portfolio':view=portfolio(id);break;case 'certificate':view=certificate(id);break;default:view=notFound();}app.innerHTML=frame(view,['explore','detail'].includes(name)?'explore':name, {full:!signedDashboard&&['home','dashboard','auth','register','free','workspace'].includes(name)});if(name==='explore')updateCatalog();document.title=`${signedDashboard?'Dashboard':['home','dashboard'].includes(name)?'Kenali Pekerjaan':name==='progress'?'Progres':name==='profile'?'Profil':pageTitles[name]||'SiMagang'} — SiMagang`;if(scroll)window.scrollTo({top:0,behavior:'instant'});}
-window.addEventListener('hashchange',onRoute);
-document.addEventListener('submit',e=>{if(e.target.id!=='profile-form')return;e.preventDefault();const values=new FormData(e.target);try{api.updateProfile({name:values.get('name'),email:values.get('email'),nickname:values.get('nickname'),city:values.get('city'),institution:values.get('institution'),major:values.get('major'),educationLevel:values.get('educationLevel'),interest:values.get('interest'),bio:values.get('bio'),avatarColor:values.get('avatarColor')});render(false);toast('Profil berhasil diperbarui.');}catch(error){toast(error.message);}});
-document.addEventListener('input',e=>{if(e.target.id==='catalog-search'){filters.search=e.target.value;updateCatalog();}if(e.target.matches('[data-answer]')&&e.target.closest('#task-work-form')){const taskId=e.target.closest('form').dataset.task,config=taskById(taskId),form=e.target.closest('form');const answers=readForm(form,config);try{api.saveDraft(taskId,answers);document.getElementById('live-artifact').innerHTML=artifact(config,answers);const status=document.getElementById('autosave');if(status)status.innerHTML=`${ico('check-circle')} Draf disimpan`; }catch(err){toast(err.message);} }});
-document.addEventListener('change',e=>{if(e.target.id==='catalog-category'){filters.category=e.target.value;updateCatalog();}if(e.target.matches('input[data-answer][type="checkbox"]')&&e.target.closest('#task-work-form')){const form=e.target.closest('form'),config=taskById(form.dataset.task);const answers=readForm(form,config);try{api.saveDraft(config.id,answers);document.getElementById('live-artifact').innerHTML=artifact(config,answers);}catch(err){toast(err.message);}}});
-document.addEventListener('submit',e=>{if(!['free-task-form','demo-auth-form','demo-register-form','demo-checkout-form','task-work-form'].includes(e.target.id))return;e.preventDefault();const form=e.target;try{if(form.id==='free-task-form'){const answers=readForm(form,freeTask);api.submitFree(answers);go('free-result');}else if(form.id==='demo-auth-form'){const d=new FormData(form);api.signInDemo(String(d.get('email')));go(takePending());}else if(form.id==='demo-register-form'){const d=new FormData(form);api.registerDemo(String(d.get('name')),String(d.get('email')));go(takePending());}else if(form.id==='demo-checkout-form'){api.checkout('system-analyst',String(new FormData(form).get('method')));go('welcome');}else if(form.id==='task-work-form'){const id=form.dataset.task;const cfg=taskById(id);api.saveDraft(id,readForm(form,cfg));const data=api.submitTask(id);render(false);toast('Tugas dinilai. Lihat hasil dan masukanmu.');}}catch(err){toast(err.message);}});
-document.addEventListener('click',e=>{const filter=e.target.closest('[data-act="progress-filter"]');if(!filter)return;progressFilter=filter.dataset.filter;render(false);document.querySelector?.(`[data-act="progress-filter"][data-filter="${progressFilter}"]`)?.focus();});
-document.addEventListener('click',e=>{if(e.target.closest('[data-act="scroll-detail"]')){document.getElementById('detail-overview')?.scrollIntoView({behavior:'smooth'});return;}if(e.target.closest('[data-act="scroll-artifact"]')){document.getElementById('submitted-artifact')?.scrollIntoView({behavior:'smooth'});return;}if(e.target.closest('[data-act="save-work-draft"]')){const form=e.target.closest('#task-work-form');if(!form)return;try{api.saveDraft(form.dataset.task,readForm(form,taskById(form.dataset.task)));toast('Draf tersimpan. Kamu bisa melanjutkannya nanti.');}catch(error){toast(error.message);}}});
-document.addEventListener('click',e=>{if(e.target.closest('[data-locked]')){e.preventDefault();toast('Selesaikan tugas sebelumnya terlebih dahulu.');return;}const t=e.target.closest('[data-act]');if(!t)return;const action=t.dataset.act;switch(action){case 'toggle-menu':{const el=document.getElementById('mobile-nav');el.hidden=!el.hidden;t.setAttribute('aria-expanded',String(!el.hidden));break;}case 'logout':api.logout();go('dashboard');break;case 'start-work':{const attempt=api.startAttempt();const next=tasks.find(task=>!submittedTask(attempt.tasks[task.id]));go(next?'workspace/'+next.id:'report/'+attempt.id);break;}case 'reset-filter':filters={search:'',category:'all'};render(false);break;case 'download-current':{const config=taskById(t.dataset.task);const a=currentAttempt();const answers=a?.tasks?.[config.id]?.draft||{};const content=`# ${config.deliverable} — DRAF SIMAGANG\n\n`+config.fields.map(f=>`- ${f.label}\n  ${fieldName(f,answers[f.id])}`).join('\n')+'\n\nDokumen latihan dari Simulasi System Analyst (perusahaan fiktif).\n';downloadText(`SiMagang-${config.id}-Draft.md`,content,'text/markdown;charset=utf-8');toast('Draf artefak diunduh.');break;}case 'download-report':downloadText('SiMagang-Work-Performance-Report.md',formatReport(route().split('/')[1]),'text/markdown;charset=utf-8');toast('Laporan diunduh.');break;case 'download-portfolio':downloadText('SiMagang-Portfolio-Evidence.md',formatPortfolio(route().split('/')[1]),'text/markdown;charset=utf-8');toast('Portofolio diunduh.');break;case 'download-certificate':downloadCertificate(route().split('/')[1]);toast('Sertifikat demo SVG diunduh.');break;case 'print':window.print();break;case 'new-attempt':if(confirm('Mulai percobaan baru? Hasil lama tetap tersimpan dalam browser tetapi tidak lagi menjadi percobaan aktif.')){api.newAttempt();go('workspace/requirements');}break;case 'reset-demo':if(confirm('Hapus seluruh identitas, pembelian demo, hasil tugas, dan progres demo di browser ini?')){api.reset();go('home');toast('Data demo direset.');}break;} });
+function report(attemptId) {
+  const result = getReport(attemptId),
+    suffix = attemptId ? `/${encodeURIComponent(attemptId)}` : "";
+  if (!result) return incompletePage("Laporan Kinerja belum tersedia");
+  return `<section class="container page-pad report-page"><div class="breadcrumbs"><a href="#/dashboard">Dashboard</a>${ico("chevron")}<span>Laporan Kinerja</span></div><div class="report-hero"><div><div class="eyebrow">LAPORAN KINERJA SIMULASI</div><h1>Hasil kerja <span>proyekmu.</span></h1><p>${esc(CASE.name)} · PT Nusa Digital Solusi · Perusahaan fiktif</p><span class="report-complete-status">${ico("check-circle")} Selesai · ${tasks.length} tugas dikirim</span></div><div class="report-icon">${ico("chart")}</div></div><div class="report-summary"><div><span>RATA-RATA TERTIMBANG</span><strong>${result.score}<small>/100</small></strong></div><div><span>TUGAS SELESAI</span><strong>${tasks.length}<small>/${tasks.length}</small></strong></div></div><div class="report-actions">${A("portfolio" + suffix, `Buka Portofolio ${ico("file")}`, "primary")}${result.eligible ? A("certificate" + suffix, `Lihat Sertifikat ${ico("award")}`, "outline") : ""}<button class="btn btn-light" data-act="download-report">${ico("download")} Unduh Laporan (.md)</button></div><div class="report-card-list">${tasks
+    .map((task) => {
+      const submission = submittedTask(result.a.tasks[task.id]);
+      return `<article class="content-panel report-task"><div class="report-task-head"><div><div class="eyebrow">TUGAS ${task.number} · ${esc(task.deliverable.toUpperCase())}</div><h2>${esc(task.title)}</h2></div>${scoreTag(submission.assessment.score)}</div><p class="report-task-intro">Penilaian per aspek</p><ul class="report-rubric-list">${submission.assessment.breakdown.map((item) => `<li><b>${esc(item.label)}</b><span>${item.earned}/${item.max}</span><p>${esc(item.feedback)}</p></li>`).join("")}</ul>${A("portfolio" + suffix, `Lihat ${esc(task.deliverable)} ${ico("arrow")}`, "light")}</article>`;
+    })
+    .join(
+      "",
+    )}</div><div class="report-bottom-note">${ico("shield")} <span>Skor berasal dari jawaban yang dikirim dan rubrik ${esc(RUBRIC_VERSION)}. Bobot tugas: ${tasks.map((task) => task.weight + "%").join(" / ")}. Hasil ini menggambarkan performa pada simulasi, bukan jaminan kesiapan kerja.</span></div></section>`;
+}
+function portfolio(attemptId) {
+  const result = getReport(attemptId),
+    suffix = attemptId ? `/${encodeURIComponent(attemptId)}` : "";
+  if (!result) return incompletePage("Portofolio belum tersedia");
+  return `<section class="container page-pad portfolio-page"><div class="breadcrumbs"><a href="#/dashboard">Dashboard</a>${ico("chevron")}<a href="#/report${suffix}">Laporan</a>${ico("chevron")}<span>Portofolio Latihan</span></div><div class="portfolio-title"><div><div class="eyebrow">BUKTI PORTOFOLIO</div><h1>Dokumen hasil kerja <span>${esc(state().user?.name || "Peserta")}</span></h1><p>Junior System Analyst · ${esc(CASE.name)} · PT Nusa Digital Solusi (perusahaan fiktif)</p></div><button class="btn btn-primary" data-act="download-portfolio">${ico("download")} Unduh Portofolio (.md)</button></div><div class="content-panel portfolio-skills"><h2>Kompetensi yang dipraktikkan</h2><div class="chip-row">${getSimulation(
+    "system-analyst",
+  )
+    .skills.map((skill) => `<span class="chip">${esc(skill)}</span>`)
+    .join(
+      "",
+    )}</div><p>Artefak berikut dibuat dari jawaban yang benar-benar kamu kirim dalam simulasi.</p></div>${tasks
+    .map((task) => {
+      const submission = submittedTask(result.a.tasks[task.id]);
+      return `<article class="content-panel portfolio-section"><div class="portfolio-section-header"><div><div class="eyebrow">ARTEFAK ${String(task.number).padStart(2, "0")}</div><h2>${esc(task.deliverable)}</h2></div>${scoreTag(submission.assessment.score)}</div>${artifact(task, submission.answers)}</article>`;
+    })
+    .join(
+      "",
+    )}<div class="portfolio-footer">${A("report" + suffix, `${ico("arrow")} Kembali ke Laporan`, "light")}${result.eligible ? A("certificate" + suffix, `Lihat Sertifikat ${ico("award")}`, "outline") : ""}</div></section>`;
+}
+function certificate(attemptId) {
+  const r = getReport(attemptId),
+    suffix = attemptId ? `/${encodeURIComponent(attemptId)}` : ``;
+  if (!r) return incompletePage("Sertifikat belum tersedia");
+  if (!r.eligible)
+    return `<section class="container page-pad"><div class="empty-state">${ico("alert")}<h1>Sertifikat belum dapat diterbitkan</h1><p>Semua tugas selesai, tetapi rata-rata nilai ${r.score}/100 masih di bawah ambang 70/100. Kamu tetap bisa mengunduh portofolio dan laporan. Untuk mencoba lagi, mulai percobaan baru.</p><div class="inline-actions">${A("report" + suffix, "Lihat Hasil", "outline")}${A("portfolio" + suffix, "Unduh Portofolio", "light")}<button class="btn btn-primary" data-act="new-attempt">Coba Proyek Lagi ${ico("refresh")}</button></div></div></section>`;
+  const user = state().user,
+    id = "SIM-DEMO-" + r.a.id.split("_").pop().toUpperCase();
+  return `<section class="container page-pad certificate-page"><div class="breadcrumbs"><a href="#/report${suffix}">Laporan Kinerja</a>${ico("chevron")}<span>Sertifikat</span></div><div class="certificate-header"><div><div class="eyebrow">BUKTI PENYELESAIAN</div><h1>Sertifikat penyelesaian latihanmu.</h1><p>Diterbitkan setelah ketiga tugas selesai dengan skor akhir memenuhi ambang latihan.</p></div><div class="inline-actions"><button class="btn btn-primary" data-act="download-certificate">${ico("download")} Unduh Sertifikat (.svg)</button><button class="btn btn-outline" data-act="print">${ico("file")} Cetak</button></div></div><div class="certificate-paper" id="certificate-paper"><div class="cert-border"><div class="cert-brand">${ico("briefcase")} SiMagang</div><div class="cert-label">CERTIFICATE OF COMPLETION</div><p class="cert-given">Diberikan kepada</p><h2>${esc(user?.name || "Peserta")}</h2><div class="cert-line"></div><p class="cert-descr">Atas penyelesaian simulasi proyek pembelajaran</p><h3>Junior System Analyst · Requirement Analysis & Validation</h3><p class="cert-descr">Menyelesaikan tiga tugas dan evaluasi terstruktur pada proyek latihan Meeting Room Booking System.</p><div class="cert-metadata"><div><small>SKOR AKHIR</small><strong>${r.score}/100</strong></div><div><small>TANGGAL PENYELESAIAN</small><strong>${dated(submittedTask(r.a.tasks.validation).submittedAt)}</strong></div><div><small>ID SERTIFIKAT</small><strong>${esc(id)}</strong></div></div><p class="cert-foot">Sertifikat latihan · Bukan sertifikasi profesi atau bukti pengalaman magang resmi.</p></div></div></section>`;
+}
+function notFound() {
+  return `<section class="container page-pad empty-state">${ico("search")}<h1>Halaman tidak ditemukan</h1><p>Periksa alamat atau kembali ke katalog.</p>${A("explore", `Kembali ke katalog ${ico("arrow")}`, "primary")}</section>`;
+}
+function formatReport(attemptId) {
+  const r = getReport(attemptId);
+  if (!r) return "";
+  const s = state();
+  let out = `# LAPORAN KINERJA SIMAGANG\n\nNama: ${s.user?.name || "-"}\nPosisi: Junior System Analyst\nProyek: ${CASE.name}\nRubrik: ${RUBRIC_VERSION}\nSkor akhir: ${r.score}/100\n\n`;
+  for (const t of tasks) {
+    const p = submittedTask(r.a.tasks[t.id]);
+    out += `## ${t.title}\nBobot: ${t.weight}%\nSkor: ${p.assessment.score}/100\n`;
+    for (const b of p.assessment.breakdown)
+      out += `- ${b.label}: ${b.earned}/${b.max} — ${b.feedback}\n`;
+    out += "\n";
+  }
+  return out;
+}
+function formatPortfolio(attemptId) {
+  const r = getReport(attemptId);
+  if (!r) return "";
+  const s = state();
+  let out = `# PORTOFOLIO LATIHAN SIMAGANG\n\nPeserta: ${s.user?.name || "-"}\nProyek: ${CASE.name}\nTanggal: ${dated(r.a.createdAt)}\n\n`;
+  for (const t of tasks) {
+    const p = submittedTask(r.a.tasks[t.id]);
+    out += `## ${t.number}. ${t.deliverable} — ${p.assessment.score}/100\n\n`;
+    for (const f of t.fields)
+      out += `- ${f.label}\n  ${fieldName(f, p.answers[f.id])}\n`;
+    out += "\n";
+  }
+  return out;
+}
+function downloadCertificate(attemptId) {
+  const r = getReport(attemptId);
+  if (!r?.eligible) return;
+  const s = state();
+  const safeSvg = (v) =>
+    String(v ?? "").replace(
+      /[&<>"']/g,
+      (x) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[x],
+    );
+  const id = "SIM-DEMO-" + r.a.id.split("_").pop().toUpperCase();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850"><rect width="1200" height="850" fill="#f8faff"/><rect x="38" y="38" width="1124" height="774" rx="18" fill="#fff" stroke="#17305C" stroke-width="4"/><rect x="56" y="56" width="1088" height="738" rx="11" fill="none" stroke="#c6d6ed" stroke-width="2"/><text x="600" y="141" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#17305C">SiMagang</text><text x="600" y="213" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" fill="#537099" letter-spacing="5">CERTIFICATE OF COMPLETION</text><text x="600" y="287" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#63738c">Diberikan kepada</text><text x="600" y="362" text-anchor="middle" font-family="Arial,sans-serif" font-size="48" font-weight="bold" fill="#17305C">${safeSvg(s.user?.name || "Peserta")}</text><path d="M360 387H840" stroke="#d6a448" stroke-width="3"/><text x="600" y="449" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" fill="#63738c">Atas penyelesaian simulasi proyek pembelajaran</text><text x="600" y="504" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-weight="bold" fill="#17305C">Junior System Analyst</text><text x="600" y="543" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" fill="#537099">Requirement Analysis &amp; Validation</text><text x="600" y="618" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" fill="#17305C">Skor akhir: ${r.score}/100  |  ${safeSvg(dated(submittedTask(r.a.tasks.validation).submittedAt))}</text><text x="600" y="669" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#63738c">ID Demo: ${safeSvg(id)}</text><text x="600" y="738" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" fill="#b05548">SERTIFIKAT LATIHAN — BUKAN SERTIFIKASI PROFESI ATAU MAGANG RESMI</text></svg>`;
+  downloadText(
+    "SiMagang-Sertifikat-DEMO.svg",
+    svg,
+    "image/svg+xml;charset=utf-8",
+  );
+}
+function toast(message) {
+  const el = document.getElementById("toast");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.add("toast-on");
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => el.classList.remove("toast-on"), 4200);
+}
+function readForm(form, config) {
+  const obj = {};
+  for (const field of config.fields) {
+    if (field.type === "multi") {
+      obj[field.id] = [
+        ...form.querySelectorAll(`input[name="${field.id}"]:checked`),
+      ].map((i) => i.value);
+    } else {
+      obj[field.id] = form.elements[field.id]?.value || "";
+    }
+  }
+  return obj;
+}
+function onRoute() {
+  render(true);
+}
+function render(scroll = false) {
+  const value = route();
+  const [name, id] = value.split("/");
+  const s = state();
+  const signedDashboard = name === "dashboard" && !!s.user;
+  const protectedRoutes = [
+    "checkout",
+    "welcome",
+    "workspace",
+    "report",
+    "portfolio",
+    "certificate",
+    "profile",
+  ];
+  if (protectedRoutes.includes(name) && !s.user) {
+    setPending(value);
+    go("auth");
+    return;
+  }
+  if (
+    ["welcome", "workspace", "report", "portfolio", "certificate"].includes(
+      name,
+    ) &&
+    !api.hasAccess("system-analyst")
+  ) {
+    go("checkout/system-analyst");
+    return;
+  }
+  if (name === "checkout" && s.user && api.hasAccess(id)) {
+    const owned = api
+      .getMySimulations()
+      .find((item) => item.simulationId === id);
+    go(
+      owned?.status === "completed"
+        ? `report/${owned.attemptId}`
+        : owned?.status === "in-progress"
+          ? `workspace/${owned.nextTaskId}`
+          : "welcome",
+    );
+    return;
+  }
+  if (["auth", "register"].includes(name) && s.user) {
+    go(takePending());
+    return;
+  }
+  let view;
+  switch (name) {
+    case "home":
+      view = home();
+      break;
+    case "dashboard":
+      view = signedDashboard ? dashboard() : home();
+      break;
+    case "explore":
+      view = explore();
+      break;
+    case "detail":
+      view = detail(id);
+      break;
+    case "free":
+      view = free();
+      break;
+    case "free-result":
+      view = resultFree();
+      break;
+    case "auth":
+      view = auth();
+      break;
+    case "register":
+      view = auth("register");
+      break;
+    case "about":
+      view = informationPage("about");
+      break;
+    case "help":
+      view = informationPage("help");
+      break;
+    case "privacy":
+      view = informationPage("privacy");
+      break;
+    case "checkout":
+      view = checkout(id);
+      break;
+    case "welcome":
+      view = welcome();
+      break;
+    case "workspace":
+      view = workspace(id);
+      break;
+    case "progress":
+      view = progressPage();
+      break;
+    case "profile":
+      view = profilePage();
+      break;
+    case "report":
+      view = report(id);
+      break;
+    case "portfolio":
+      view = portfolio(id);
+      break;
+    case "certificate":
+      view = certificate(id);
+      break;
+    default:
+      view = notFound();
+  }
+  app.innerHTML = frame(
+    view,
+    ["explore", "detail"].includes(name) ? "explore" : name,
+    {
+      full:
+        !signedDashboard &&
+        ["home", "dashboard", "auth", "register", "free", "workspace"].includes(
+          name,
+        ),
+    },
+  );
+  if (name === "explore") updateCatalog();
+  document.title = `${signedDashboard ? "Dashboard" : ["home", "dashboard"].includes(name) ? "Kenali Pekerjaan" : name === "progress" ? "Progres" : name === "profile" ? "Profil" : pageTitles[name] || "SiMagang"} — SiMagang`;
+  if (scroll) window.scrollTo({ top: 0, behavior: "instant" });
+}
+window.addEventListener("hashchange", onRoute);
+document.addEventListener("submit", (e) => {
+  if (e.target.id !== "profile-form") return;
+  e.preventDefault();
+  const values = new FormData(e.target);
+  try {
+    api.updateProfile({
+      name: values.get("name"),
+      email: values.get("email"),
+      nickname: values.get("nickname"),
+      city: values.get("city"),
+      institution: values.get("institution"),
+      major: values.get("major"),
+      educationLevel: values.get("educationLevel"),
+      interest: values.get("interest"),
+      bio: values.get("bio"),
+      avatarColor: values.get("avatarColor"),
+    });
+    render(false);
+    toast("Profil berhasil diperbarui.");
+  } catch (error) {
+    toast(error.message);
+  }
+});
+document.addEventListener("input", (e) => {
+  if (e.target.id === "catalog-search") {
+    filters.search = e.target.value;
+    updateCatalog();
+  }
+  if (
+    e.target.matches("[data-answer]") &&
+    e.target.closest("#task-work-form")
+  ) {
+    const taskId = e.target.closest("form").dataset.task,
+      config = taskById(taskId),
+      form = e.target.closest("form");
+    const answers = readForm(form, config);
+    try {
+      api.saveDraft(taskId, answers);
+      document.getElementById("live-artifact").innerHTML = artifact(
+        config,
+        answers,
+      );
+      const status = document.getElementById("autosave");
+      if (status) status.innerHTML = `${ico("check-circle")} Draf disimpan`;
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+});
+document.addEventListener("change", (e) => {
+  if (e.target.id === "catalog-category") {
+    filters.category = e.target.value;
+    updateCatalog();
+  }
+  if (
+    e.target.matches('input[data-answer][type="checkbox"]') &&
+    e.target.closest("#task-work-form")
+  ) {
+    const form = e.target.closest("form"),
+      config = taskById(form.dataset.task);
+    const answers = readForm(form, config);
+    try {
+      api.saveDraft(config.id, answers);
+      document.getElementById("live-artifact").innerHTML = artifact(
+        config,
+        answers,
+      );
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+});
+document.addEventListener("submit", (e) => {
+  if (
+    ![
+      "free-task-form",
+      "demo-auth-form",
+      "demo-register-form",
+      "demo-checkout-form",
+      "task-work-form",
+    ].includes(e.target.id)
+  )
+    return;
+  e.preventDefault();
+  const form = e.target;
+  try {
+    if (form.id === "free-task-form") {
+      const answers = readForm(form, freeTask);
+      api.submitFree(answers);
+      go("free-result");
+    } else if (form.id === "demo-auth-form") {
+      const d = new FormData(form);
+      api.signInDemo(String(d.get("email")));
+      go(takePending());
+    } else if (form.id === "demo-register-form") {
+      const d = new FormData(form);
+      api.registerDemo(String(d.get("name")), String(d.get("email")));
+      go(takePending());
+    } else if (form.id === "demo-checkout-form") {
+      api.checkout("system-analyst", String(new FormData(form).get("method")));
+      go("welcome");
+    } else if (form.id === "task-work-form") {
+      const id = form.dataset.task;
+      const cfg = taskById(id);
+      api.saveDraft(id, readForm(form, cfg));
+      const data = api.submitTask(id);
+      render(false);
+      toast("Tugas dinilai. Lihat hasil dan masukanmu.");
+    }
+  } catch (err) {
+    toast(err.message);
+  }
+});
+document.addEventListener("click", (e) => {
+  const filter = e.target.closest('[data-act="progress-filter"]');
+  if (!filter) return;
+  progressFilter = filter.dataset.filter;
+  render(false);
+  document
+    .querySelector?.(
+      `[data-act="progress-filter"][data-filter="${progressFilter}"]`,
+    )
+    ?.focus();
+});
+document.addEventListener("click", (e) => {
+  if (e.target.closest('[data-act="scroll-detail"]')) {
+    document
+      .getElementById("detail-overview")
+      ?.scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+  if (e.target.closest('[data-act="scroll-artifact"]')) {
+    document
+      .getElementById("submitted-artifact")
+      ?.scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+  if (e.target.closest('[data-act="save-work-draft"]')) {
+    const form = e.target.closest("#task-work-form");
+    if (!form) return;
+    try {
+      api.saveDraft(
+        form.dataset.task,
+        readForm(form, taskById(form.dataset.task)),
+      );
+      toast("Draf tersimpan. Kamu bisa melanjutkannya nanti.");
+    } catch (error) {
+      toast(error.message);
+    }
+  }
+});
+document.addEventListener("click", (e) => {
+  if (e.target.closest("[data-locked]")) {
+    e.preventDefault();
+    toast("Selesaikan tugas sebelumnya terlebih dahulu.");
+    return;
+  }
+  const t = e.target.closest("[data-act]");
+  if (!t) return;
+  const action = t.dataset.act;
+  switch (action) {
+    case "toggle-menu": {
+      const el = document.getElementById("mobile-nav");
+      el.hidden = !el.hidden;
+      t.setAttribute("aria-expanded", String(!el.hidden));
+      break;
+    }
+    case "logout":
+      api.logout();
+      go("dashboard");
+      break;
+    case "start-work": {
+      const attempt = api.startAttempt();
+      const next = tasks.find((task) => !submittedTask(attempt.tasks[task.id]));
+      go(next ? "workspace/" + next.id : "report/" + attempt.id);
+      break;
+    }
+    case "reset-filter":
+      filters = { search: "", category: "all" };
+      render(false);
+      break;
+    case "download-current": {
+      const config = taskById(t.dataset.task);
+      const a = currentAttempt();
+      const answers = a?.tasks?.[config.id]?.draft || {};
+      const content =
+        `# ${config.deliverable} — DRAF SIMAGANG\n\n` +
+        config.fields
+          .map((f) => `- ${f.label}\n  ${fieldName(f, answers[f.id])}`)
+          .join("\n") +
+        "\n\nDokumen latihan dari Simulasi System Analyst (perusahaan fiktif).\n";
+      downloadText(
+        `SiMagang-${config.id}-Draft.md`,
+        content,
+        "text/markdown;charset=utf-8",
+      );
+      toast("Draf artefak diunduh.");
+      break;
+    }
+    case "download-report":
+      downloadText(
+        "SiMagang-Work-Performance-Report.md",
+        formatReport(route().split("/")[1]),
+        "text/markdown;charset=utf-8",
+      );
+      toast("Laporan diunduh.");
+      break;
+    case "download-portfolio":
+      downloadText(
+        "SiMagang-Portfolio-Evidence.md",
+        formatPortfolio(route().split("/")[1]),
+        "text/markdown;charset=utf-8",
+      );
+      toast("Portofolio diunduh.");
+      break;
+    case "download-certificate":
+      downloadCertificate(route().split("/")[1]);
+      toast("Sertifikat demo SVG diunduh.");
+      break;
+    case "print":
+      window.print();
+      break;
+    case "new-attempt":
+      if (
+        confirm(
+          "Mulai percobaan baru? Hasil lama tetap tersimpan dalam browser tetapi tidak lagi menjadi percobaan aktif.",
+        )
+      ) {
+        api.newAttempt();
+        go("workspace/requirements");
+      }
+      break;
+    case "reset-demo":
+      if (
+        confirm(
+          "Hapus seluruh identitas, pembelian demo, hasil tugas, dan progres demo di browser ini?",
+        )
+      ) {
+        api.reset();
+        go("home");
+        toast("Data demo direset.");
+      }
+      break;
+  }
+});
 render();
