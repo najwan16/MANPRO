@@ -240,6 +240,12 @@
 .report-rubric-list li p{font-size:11px;color:#64748b;line-height:1.5;margin:5px 0 0}
 .portfolio-skills h2{font-size:18px;margin:0 0 11px}
 .portfolio-skills p{font-size:12px;color:#64748b;margin:12px 0 0}
+.portfolio-score-summary{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:24px;align-items:center}
+.portfolio-score-summary>div:first-child{border-right:1px solid #e2eaf4;padding-right:22px}
+.portfolio-score-summary>div:first-child span{display:block;color:#7990aa;font-size:10px;font-weight:850;letter-spacing:.08em}
+.portfolio-score-summary>div:first-child strong{display:block;color:#17305c;font-size:27px;margin-top:6px}
+.portfolio-score-summary h2{margin:0 0 11px}
+@media(max-width:580px){.portfolio-score-summary{grid-template-columns:1fr;gap:17px}.portfolio-score-summary>div:first-child{border-right:0;border-bottom:1px solid #e2eaf4;padding:0 0 15px}}
 .portfolio-section .artifact-doc{margin-top:18px}
 @media(max-width:810px){.explore-filters{grid-template-columns:minmax(0,1fr) 210px}.simulation-detail-hero{grid-template-columns:1fr}.simulation-detail-art{max-width:500px}.workspace-context{grid-template-columns:1fr}.report-card-list{grid-template-columns:1fr}}
 @media(max-width:580px){.explore-filters{grid-template-columns:1fr}.explore-filters .search-wrap{grid-column:auto}.simulation-detail-hero{gap:22px;padding-bottom:26px}.simulation-detail-actions{align-items:stretch;flex-direction:column}.simulation-detail-actions>.btn{width:100%}.simulation-overview-grid,.simulation-benefits{grid-template-columns:1fr}.simulation-detail-section{padding:30px 0}.simulation-task-body{padding-left:20px}.workspace-form-actions,.workspace-form-actions .btn{width:100%}.workspace-progress>div:first-child{flex-wrap:wrap}.report-rubric-list li span{float:none;display:block;margin-top:4px}}
@@ -325,3 +331,5 @@
 .profile-layout form .profile-help{line-height:1.65;margin:0 0 21px}
 @media(max-width:810px){.profile-layout{grid-template-columns:1fr}.profile-preview{position:static}.profile-layout form{padding:28px}}
 @media(max-width:580px){.profile-fields{grid-template-columns:1fr}.profile-field-full{grid-column:auto}.profile-layout form{padding:22px}.profile-form-section{margin-bottom:23px;padding-bottom:24px}}
+.dynamic-countdown{font-variant-numeric:tabular-nums;font-size:16px;min-width:120px;justify-content:center}.dynamic-countdown svg{width:17px;height:17px}.dynamic-countdown.is-urgent{color:#b8443d;border-color:#efc2be;background:#fff0ef}.work-countdown{align-self:flex-start}
+.simulation-task-intro{font-size:12px;color:#71839a;margin:0 0 15px}.simulation-task-item{align-items:flex-start}.simulation-task-duration{display:flex;align-items:center;gap:6px;color:#67809c;font-size:11px;font-weight:750;margin:8px 0}.simulation-task-duration svg{width:15px;height:15px}.simulation-task-item p{font-size:12px;color:#62758d;line-height:1.7;margin:9px 0}.availability-label{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:8px 10px;font-size:10px;font-weight:800;margin:2px 0 8px}.availability-label svg{width:15px;height:15px}.availability-label.available{color:#177454;background:#e8f7ef}.availability-label.unavailable{color:#8c652b;background:#fff4df}

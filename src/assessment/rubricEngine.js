@@ -20,14 +20,20 @@ export function assess(config, answers = {}) {
   return {score,breakdown,rubricVersion:RUBRIC_VERSION,gradedAt:new Date().toISOString()};
 }
 export function isComplete(config,answers={}) {
-  return config.fields.every(f=>f.type==='multi'?Array.isArray(answers[f.id])&&answers[f.id].length>0:f.type==='textarea'?String(answers[f.id]||'').trim().length>=(f.minlength||1):Boolean(answers[f.id]));
+  return config.fields.every(f=>f.type==='multi'?Array.isArray(answers[f.id])&&answers[f.id].length>=(f.minSelections||1)&&answers[f.id].length<=(f.maxSelections||Infinity):f.type==='textarea'?String(answers[f.id]||'').trim().length>=(f.minlength||1):Boolean(answers[f.id]));
 }
 // Data lama tetap dapat dibaca setelah alur dua versi dihapus.
 export function submittedTask(data) {return data?.final||data?.v2||data?.v1||null;}
 export function weightedScore(tasks,attempt) {
-  const available=tasks.filter(t=>submittedTask(attempt?.tasks?.[t.id])?.assessment);
+  const available=tasks.map(task=>{
+    const assessment=submittedTask(attempt?.tasks?.[task.id])?.assessment;
+    const score=Number(assessment?.score);
+    const weight=Number(task.weight);
+    return {score,weight:Number.isFinite(weight)&&weight>0?weight:1};
+  }).filter(item=>Number.isFinite(item.score));
   if(!available.length)return null;
-  return Math.round(available.reduce((sum,t)=>sum+submittedTask(attempt.tasks[t.id]).assessment.score*t.weight,0)/available.reduce((sum,t)=>sum+t.weight,0));
+  const totalWeight=available.reduce((sum,item)=>sum+item.weight,0);
+  return totalWeight?Math.round(available.reduce((sum,item)=>sum+item.score*item.weight,0)/totalWeight):null;
 }
 export function completion(tasks,attempt) {return tasks.every(t=>Boolean(submittedTask(attempt?.tasks?.[t.id])));}
 export function certificateEligible(tasks,attempt) {return completion(tasks,attempt)&&weightedScore(tasks,attempt)>=70;}
