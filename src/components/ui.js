@@ -66,7 +66,7 @@ export function toast(message) {
 
 export function optionInput(f, current) {
   if (f.type === "textarea")
-    return `<label class="work-field"><span>${esc(f.label)} <small style="color:#8b99ac;font-weight:500">· Dicatat pada portofolio, tidak dinilai otomatis</small></span><textarea data-answer="${f.id}" name="${f.id}" rows="4" minlength="${f.minlength || 1}" required placeholder="${esc(f.placeholder \vert{}\vert{} "Tuliskan hasil analisismu...")}">${esc(current || "")}</textarea></label>`;
+    return `<label class="work-field"><span>${esc(f.label)} <small style="color:#8b99ac;font-weight:500">· Dicatat pada portofolio, tidak dinilai otomatis</small></span><textarea data-answer="${f.id}" name="${f.id}" rows="4" minlength="${f.minlength || 1}" required placeholder="${esc(f.placeholder || "Tuliskan hasil analisismu...")}">${esc(current || "")}</textarea></label>`;
   if (f.type === "multi") {
     const v = Array.isArray(current) ? current : [];
     return `<fieldset class="work-field"><legend>${esc(f.label)}</legend><div class="checkbox-grid">${f.options.map(([val, label]) => `<label class="check-option"><input type="checkbox" data-answer="${f.id}" name="${f.id}" value="${esc(val)}" ${v.includes(val) ? "checked" : ""}/><span>${esc(label)}</span></label>`).join("")}</div></fieldset>`;
