@@ -212,6 +212,7 @@
 .checkout-demo-warning{display:flex;align-items:flex-start;gap:9px;padding:13px;margin:17px 0;background:#eaf2fc;border:1px solid #cfdeef;border-radius:10px;color:#17305c;font-size:12px;line-height:1.5}
 .checkout-demo-warning .ico{width:18px;height:18px;flex:none}
 .workspace-progress{border:1px solid #e5eaf0;background:#fff;border-radius:12px;padding:16px 19px;margin:19px 0}
+.task-countdown{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid #d9e4f1;border-radius:10px;background:#f4f8fd;color:#17305c;font-size:15px;font-variant-numeric:tabular-nums;font-weight:800;white-space:nowrap}.task-countdown .ico{width:17px;height:17px}.task-countdown.is-urgent{border-color:#e8a49b;background:#fff1ef;color:#a4372e;animation:timer-pulse 1s ease-in-out infinite alternate}@keyframes timer-pulse{to{box-shadow:0 0 0 4px #fce0dc}}
 .workspace-progress>div:first-child{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#64748b}
 .workspace-progress b{color:#17305c}
 .workspace-progress .dashboard-progress-track{margin-top:10px}

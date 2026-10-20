@@ -1,4 +1,6 @@
 import {mockApi} from './mockAdapter.js';
-// MVP sengaja tidak mengaktifkan produksi secara palsu. Pilihan adapter didokumentasikan.
+import {supabaseAdapter} from './supabaseAdapter.js';
 export const api=mockApi;
-export const isDemo=true;
+export const authApi=supabaseAdapter;
+export const isSupabase=import.meta.env.VITE_APP_MODE==='supabase';
+export const isDemo=!isSupabase;

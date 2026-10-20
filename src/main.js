@@ -1,4 +1,4 @@
-﻿import {
+import {
   simulations,
   getCompany,
   getSimulation,
@@ -17,31 +17,11 @@ import {
   completion,
   certificateEligible,
   submittedTask,
+  isComplete,
   RUBRIC_VERSION,
 } from "./assessment/rubricEngine.js";
-import { api } from "./services/index.js";
-import { downloadText } from "./utils/storage.js";
-import { supabase } from './services/supabaseClient.js'
-
-async function saveSubmissionToSupabase(userEmail, taskId, answers, score) {
-  const { data, error } = await supabase
-    .from('user_submissions')
-    .insert([
-      {
-        user_email: userEmail,
-        task_id: taskId,
-        answers: answers, // Langsung passing objek JavaScript
-        score: score
-      }
-    ]);
-
-  if (error) {
-    console.error('Gagal menyimpan ke Supabase:', error.message);
-  } else {
-    console.log('Berhasil disimpan ke Supabase:', data);
-  }
-}
-
+import { api, authApi, isSupabase } from "./services/index.js";
+import { downloadText, clearLocalSubmissionResultsOnce } from "./utils/storage.js";
 const app = document.getElementById("app");
 const esc = (v) =>
   String(v ?? "").replace(
@@ -458,10 +438,10 @@ function resultFree() {
 }
 function auth(mode = "login") {
   const registering = mode === "register";
-  return `<section class="auth-page"><div class="container auth-shell"><div class="auth-card"><div class="eyebrow">AKUN SIMAGANG</div><h1>${registering ? "Daftar untuk mulai belajar." : "Selamat datang kembali."}</h1><p>${registering ? "Buat identitas demo untuk menyimpan progres latihan di browser ini." : "Masuk dengan identitas demo yang pernah kamu buat di browser ini."}</p>
+  return `<section class="auth-page"><div class="container auth-shell"><div class="auth-card"><div class="eyebrow">AKUN SIMAGANG</div><h1>${registering ? "Daftar untuk mulai belajar." : "Selamat datang kembali."}</h1><p>${registering ? (isSupabase ? "Buat akun untuk menyimpan progres latihanmu." : "Buat identitas demo untuk menyimpan progres latihan di browser ini.") : (isSupabase ? "Masuk dengan email dan kata sandi akunmu." : "Masuk dengan identitas demo yang pernah kamu buat di browser ini.")}</p>
     <nav class="auth-switch" aria-label="Pilihan akses akun"><a href="#/auth" ${!registering ? 'aria-current="page"' : ""}>Masuk</a><a href="#/register" ${registering ? 'aria-current="page"' : ""}>Daftar</a></nav>
-    <form id="${registering ? "demo-register-form" : "demo-auth-form"}" class="form-stack">${registering ? `<label class="work-field"><span>Nama lengkap</span><input type="text" name="name" required minlength="2" maxlength="80" autocomplete="name" placeholder="Contoh: Andi Pratama" /></label>` : ""}<label class="work-field"><span>Alamat email</span><input type="email" name="email" required autocomplete="email" placeholder="nama@contoh.com" /></label><button type="submit" class="btn btn-primary btn-block">${registering ? "Daftar dan Lanjutkan" : "Masuk dan Lanjutkan"} ${ico("arrow")}</button></form>
-    <div class="auth-demo-note" role="note">${ico("shield")}<p>Mode demo: tidak memakai kata sandi atau verifikasi email. Gunakan email contoh; data akun dan progres hanya tersimpan di browser ini.</p></div><a class="auth-back" href="#/explore">${ico("arrow")} Kembali jelajahi simulasi</a></div>
+    <form id="${registering ? "demo-register-form" : "demo-auth-form"}" class="form-stack">${registering ? `<label class="work-field"><span>Nama lengkap</span><input type="text" name="name" required minlength="2" maxlength="80" autocomplete="name" placeholder="Contoh: Andi Pratama" /></label>` : ""}<label class="work-field"><span>Alamat email</span><input type="email" name="email" required autocomplete="email" placeholder="nama@contoh.com" /></label>${isSupabase ? `<label class="work-field"><span>Kata sandi</span><input type="password" name="password" required minlength="8" autocomplete="${registering ? "new-password" : "current-password"}" /></label>` : ""}<button type="submit" class="btn btn-primary btn-block">${registering ? "Daftar dan Lanjutkan" : "Masuk dan Lanjutkan"} ${ico("arrow")}</button></form>
+    <div class="auth-demo-note" role="note">${ico("shield")}<p>${isSupabase ? "Akun memakai Supabase Auth. Submission tugas tersimpan dengan identitas akun yang sudah terverifikasi." : "Mode demo: tidak memakai kata sandi atau verifikasi email. Gunakan email contoh; data akun dan progres hanya tersimpan di browser ini."}</p></div><a class="auth-back" href="#/explore">${ico("arrow")} Kembali jelajahi simulasi</a></div>
     <aside class="auth-side"><div class="eyebrow">MULAI DARI PEKERJAAN NYATA</div><h2>Latihan yang menghasilkan bukti pekerjaan.</h2><p>Kerjakan studi kasus, pahami masukan, lalu simpan hasil latihanmu.</p><div class="auth-benefit">${ico("briefcase")}<div><b>Satu proyek yang terarah</b><p>Tiga tugas analis sistem dalam satu kasus yang saling berkaitan.</p></div></div><div class="auth-benefit">${ico("target")}<div><b>Penilaian yang jelas</b><p>Umpan balik berasal dari jawaban dan rubrik setiap tugas.</p></div></div><div class="auth-benefit">${ico("file")}<div><b>Hasil yang bisa dibuka kembali</b><p>Laporan kinerja dan dokumen latihan tersimpan bersama progresmu.</p></div></div></aside></div></section>`;
 }
 function informationPage(kind) {
@@ -598,7 +578,8 @@ function workspace(id) {
     return `<section class="container page-pad empty-state"><h2>Mulai simulasi terlebih dahulu</h2>${A("welcome", "Kembali ke briefing")}</section>`;
   if (!canTask(config, attempt))
     return `<section class="container page-pad empty-state"><h2>Tugas belum terbuka</h2><p>Selesaikan tugas sebelumnya.</p>${A("workspace/" + tasks[0].id, "Kembali ke tugas awal")}</section>`;
-  const data = attempt.tasks[id] || { draft: {} },
+  const timer = api.startTaskTimer(config.id);
+  const data = { ...(api.getActive()?.tasks?.[id] || { draft: {} }), timer },
     submission = submittedTask(data),
     draft = data.draft || {},
     next = tasks[config.number],
@@ -608,7 +589,7 @@ function workspace(id) {
   const feedback = submission?.assessment?.breakdown || [],
     correctCount = feedback.filter((item) => item.correct).length;
   return `<section class="workspace-shell container-wide">${taskSidebar(config.id, attempt)}<div class="work-main"><div class="breadcrumbs work-crumb"><a href="#/dashboard">Dashboard</a>${ico("chevron")}<a href="#/progress">Progres Saya</a>${ico("chevron")}<span>Tugas ${config.number} dari ${tasks.length}</span></div><div class="work-header"><div><div class="eyebrow">TUGAS ${String(config.number).padStart(2, "0")} · ${esc(config.kicker.toUpperCase())}</div><h1>${esc(config.title)}</h1><p>${esc(config.description)}</p></div><div class="work-duration">${ico("clock")} ${esc(config.readTime)}</div></div><div class="workspace-progress"><div><b>Progres proyek</b><span>${finished} dari ${tasks.length} tugas selesai</span></div><div class="dashboard-progress-track" role="progressbar" aria-label="Progres tugas proyek" aria-valuenow="${finished}" aria-valuemin="0" aria-valuemax="${tasks.length}"><span style="width:${(finished / tasks.length) * 100}%"></span></div></div><div class="workspace-context"><div class="pm-card compact-pm"><span class="avatar">DP</span><div><span class="pm-meta">PENGANTAR · ${esc(CASE.pm.toUpperCase())}</span><p>${esc(config.briefing)}</p></div></div><div class="workspace-support"><b>Data pendukung</b><p>${esc(CASE.problem)}</p><b>Instruksi pekerjaan</b><p>${esc(config.description)} Hasilkan ${esc(config.deliverable)} dari keputusanmu.</p></div></div>
-  ${submission ? `<div class="workspace-finished-note">${ico("check-circle")} Tugas selesai · Hasil pengiriman tersimpan</div>${taskFeedback(config, submission)}<div class="workspace-feedback-summary"><span>${ico("check-circle")} ${correctCount} aspek sudah sesuai</span><span>${ico("target")} ${feedback.length - correctCount} aspek perlu ditingkatkan</span></div><section class="content-panel artifact-preview" id="submitted-artifact"><div class="eyebrow">DOKUMEN HASIL KERJA</div><h2>${esc(config.deliverable)}</h2>${artifact(config, submission.answers)}</section><div class="work-complete-actions">${next ? A("workspace/" + next.id, `Lanjut ke Tugas Berikutnya ${ico("arrow")}`, "primary btn-lg") : A("report/" + attempt.id, `Lihat Laporan Kinerja ${ico("arrow")}`, "primary btn-lg")}${A("progress", "Lihat Progres", "light")}</div>` : `<div class="content-panel work-editor"><div class="editor-head"><div><div class="eyebrow">RUANG KERJA · TUGAS ${config.number}</div><h2>Susun ${esc(config.deliverable)}</h2><p>Lengkapi keputusan di bawah. Jawabanmu akan membentuk dokumen hasil kerja.</p></div><span class="autosave" id="autosave">${ico("check-circle")} Draf tersimpan otomatis</span></div><form id="task-work-form" data-task="${esc(config.id)}" class="form-stack">${config.fields.map((field) => optionInput(field, draft[field.id])).join("")}<div class="form-foot"><span>${ico("shield")} Tinjau jawaban sebelum dikirim. Tugas dinilai satu kali.</span><div class="workspace-form-actions"><button type="button" class="btn btn-light" data-act="save-work-draft">Simpan Draf</button><button type="submit" class="btn btn-primary">Kirim Tugas ${ico("arrow")}</button></div></div></form></div><section class="content-panel artifact-preview"><div class="eyebrow">PRATINJAU DOKUMEN</div><h2>${esc(config.deliverable)}</h2><p>Dokumen berikut dibentuk dari jawabanmu.</p><div id="live-artifact">${artifact(config, draft)}</div><div class="inline-actions"><button class="btn btn-outline" data-act="download-current" data-task="${esc(config.id)}">${ico("download")} Unduh Draf (.md)</button>${config.id === "userstory" ? `<a class="btn btn-light" href="https://app.diagrams.net/" target="_blank" rel="noopener noreferrer">${ico("external")} Coba diagrams.net (opsional)</a>` : ""}</div><p class="note-muted">Diagram dari alat kerja eksternal tidak dinilai secara otomatis.</p></section>`}</div></section>`;
+  ${submission ? `<div class="workspace-finished-note">${ico("check-circle")} Tugas selesai · Hasil pengiriman tersimpan</div>${taskFeedback(config, submission)}<div class="workspace-feedback-summary"><span>${ico("check-circle")} ${correctCount} aspek sudah sesuai</span><span>${ico("target")} ${feedback.length - correctCount} aspek perlu ditingkatkan</span></div><section class="content-panel artifact-preview" id="submitted-artifact"><div class="eyebrow">DOKUMEN HASIL KERJA</div><h2>${esc(config.deliverable)}</h2>${artifact(config, submission.answers)}</section><div class="work-complete-actions">${next ? A("workspace/" + next.id, `Lanjut ke Tugas Berikutnya ${ico("arrow")}`, "primary btn-lg") : A("report/" + attempt.id, `Lihat Laporan Kinerja ${ico("arrow")}`, "primary btn-lg")}${A("progress", "Lihat Progres", "light")}</div>` : `<div class="content-panel work-editor"><div class="editor-head"><div><div class="eyebrow">RUANG KERJA · TUGAS ${config.number}</div><h2>Susun ${esc(config.deliverable)}</h2><p>Lengkapi keputusan di bawah. Jawabanmu akan membentuk dokumen hasil kerja.</p></div><span class="autosave" id="autosave">${ico("check-circle")} Draf tersimpan otomatis</span><span class="task-countdown" id="task-countdown" data-expires="${esc(data.timer.expiresAt)}">${ico("clock")} --:--</span></div><form id="task-work-form" data-task="${esc(config.id)}" class="form-stack">${config.fields.map((field) => optionInput(field, draft[field.id])).join("")}<div class="form-foot"><span>${ico("shield")} Waktu terbatas. Draf dikirim otomatis saat waktu habis.</span><div class="workspace-form-actions"><button type="button" class="btn btn-light" data-act="save-work-draft">Simpan Draf</button><button type="submit" class="btn btn-primary">Kirim Tugas ${ico("arrow")}</button></div></div></form></div><section class="content-panel artifact-preview"><div class="eyebrow">PRATINJAU DOKUMEN</div><h2>${esc(config.deliverable)}</h2><p>Dokumen berikut dibentuk dari jawabanmu.</p><div id="live-artifact">${artifact(config, draft)}</div><div class="inline-actions"><button class="btn btn-outline" data-act="download-current" data-task="${esc(config.id)}">${ico("download")} Unduh Draf (.md)</button>${config.id === "userstory" ? `<a class="btn btn-light" href="https://app.diagrams.net/" target="_blank" rel="noopener noreferrer">${ico("external")} Coba diagrams.net (opsional)</a>` : ""}</div><p class="note-muted">Diagram dari alat kerja eksternal tidak dinilai secara otomatis.</p></section>`}</div></section>`;
 }
 function getReport(attemptId) {
   const a = attemptId ? api.getAttempt(attemptId) : currentAttempt();
@@ -860,7 +841,7 @@ function render(scroll = false) {
   if (scroll) window.scrollTo({ top: 0, behavior: "instant" });
 }
 window.addEventListener("hashchange", onRoute);
-document.addEventListener("submit", (e) => {
+document.addEventListener("submit", async (e) => {
   if (e.target.id !== "profile-form") return;
   e.preventDefault();
   const values = new FormData(e.target);
@@ -932,7 +913,7 @@ document.addEventListener("change", (e) => {
     }
   }
 });
-document.addEventListener("submit", (e) => {
+document.addEventListener("submit", async (e) => {
   if (
     ![
       "free-task-form",
@@ -952,11 +933,22 @@ document.addEventListener("submit", (e) => {
       go("free-result");
     } else if (form.id === "demo-auth-form") {
       const d = new FormData(form);
-      api.signInDemo(String(d.get("email")));
+      if (isSupabase) {
+        const { user } = await authApi.signIn({ email: String(d.get("email")), password: String(d.get("password")) });
+        api.login(user.user_metadata?.full_name || "Peserta SiMagang", user.email);
+      } else api.signInDemo(String(d.get("email")));
       go(takePending());
     } else if (form.id === "demo-register-form") {
       const d = new FormData(form);
-      api.registerDemo(String(d.get("name")), String(d.get("email")));
+      if (isSupabase) {
+        const { user, session } = await authApi.signUp({ email: String(d.get("email")), password: String(d.get("password")), fullName: String(d.get("name")) });
+        if (!session) {
+          toast("Akun dibuat. Periksa email untuk verifikasi, lalu masuk.");
+          go("auth");
+          return;
+        }
+        api.login(user.user_metadata?.full_name || String(d.get("name")), user.email);
+      } else api.registerDemo(String(d.get("name")), String(d.get("email")));
       go(takePending());
     } else if (form.id === "demo-checkout-form") {
       api.checkout("system-analyst", String(new FormData(form).get("method")));
@@ -966,23 +958,24 @@ document.addEventListener("submit", (e) => {
       const cfg = taskById(id);
       const answers = readForm(form, cfg);
 
-      // Simpan draf lokal bawaan aplikasi
+      // Persist remotely first so a backend failure never looks like a successful submission.
+      if (!isComplete(cfg, answers)) throw new Error("Lengkapi seluruh bagian tugas sebelum mengirim.");
       api.saveDraft(id, answers);
-      const data = api.submitTask(id);
-
-      // --- KIRIM JUGA KE SUPABASE ---
-      const userEmail = state().user?.email || "anonymous@demo.com";
-      const score = data?.assessment?.score || 0;
-      saveSubmissionToSupabase(userEmail, id, answers, score);
+      if (isSupabase) {
+        const attempt = api.getActive();
+        const remoteId = await authApi.persistSubmission({ attempt, taskId: id, answers });
+        api.attachBackendAttempt(attempt.id, remoteId);
+      }
+      api.submitTask(id);
 
       render(false);
-      toast("Tugas dinilai dan tersimpan di database!");
+      toast("Tugas dinilai dan tersimpan.");
     }
   } catch (err) {
     toast(err.message);
   }
 });
-document.addEventListener("click", (e) => {
+document.addEventListener("click", async (e) => {
   const filter = e.target.closest('[data-act="progress-filter"]');
   if (!filter) return;
   progressFilter = filter.dataset.filter;
@@ -1020,7 +1013,7 @@ document.addEventListener("click", (e) => {
     }
   }
 });
-document.addEventListener("click", (e) => {
+document.addEventListener("click", async (e) => {
   if (e.target.closest("[data-locked]")) {
     e.preventDefault();
     toast("Selesaikan tugas sebelumnya terlebih dahulu.");
@@ -1029,6 +1022,7 @@ document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-act]");
   if (!t) return;
   const action = t.dataset.act;
+  try {
   switch (action) {
     case "toggle-menu": {
       const el = document.getElementById("mobile-nav");
@@ -1037,11 +1031,16 @@ document.addEventListener("click", (e) => {
       break;
     }
     case "logout":
+      if (isSupabase) await authApi.signOut();
       api.logout();
       go("dashboard");
       break;
     case "start-work": {
       const attempt = api.startAttempt();
+      if (isSupabase && !attempt.backendAttemptId) {
+        const remote = await authApi.startAttempt("system-analyst");
+        api.attachBackendAttempt(attempt.id, remote.id);
+      }
       const next = tasks.find((task) => !submittedTask(attempt.tasks[task.id]));
       go(next ? "workspace/" + next.id : "report/" + attempt.id);
       break;
@@ -1113,5 +1112,55 @@ document.addEventListener("click", (e) => {
       }
       break;
   }
+  } catch (error) {
+    toast(error.message || "Operasi gagal. Coba lagi.");
+  }
 });
-render();
+async function bootApp() {
+  clearLocalSubmissionResultsOnce();
+  if (isSupabase) {
+    try {
+      const session = await authApi.configure();
+      if (session?.user?.email) {
+        const profile = await authApi.getProfile();
+        api.login(profile.full_name || session.user.user_metadata?.full_name || "Peserta SiMagang", session.user.email);
+      } else api.logout();
+    } catch (error) {
+      api.logout();
+      console.error("Supabase session restore failed:", error.message);
+    }
+  }
+  render();
+}
+bootApp();
+window.setInterval(async () => {
+  const clock = document.getElementById("task-countdown");
+  if (!clock) return;
+  const seconds = Math.max(0, Math.ceil((Date.parse(clock.dataset.expires) - Date.now()) / 1000));
+  if (!seconds) {
+    const form = document.getElementById("task-work-form");
+    if (form && !clock.dataset.submitting) {
+      clock.dataset.submitting = "true";
+      const taskId = form.dataset.task;
+      try {
+        if (isSupabase) {
+          const attempt = api.getActive();
+          const answers = attempt?.tasks?.[taskId]?.draft || {};
+          const remoteId = await authApi.persistSubmission({ attempt, taskId, answers, expired: true });
+          api.attachBackendAttempt(attempt.id, remoteId);
+        }
+        api.expireTask(taskId);
+        render(false);
+        toast("Waktu habis. Jawaban terakhir dikirim otomatis.");
+      } catch (error) {
+        clock.dataset.submitting = "";
+        clock.dataset.expires = String(Date.now() + 5000);
+        toast(`Waktu habis, tetapi penyimpanan gagal: ${error.message}`);
+      }
+    }
+    return;
+  }
+  const minutes = Math.floor(seconds / 60), remaining = seconds % 60;
+  clock.innerHTML = `${ico("clock")} ${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
+  clock.classList.toggle("is-urgent", seconds <= 60);
+}, 1000);

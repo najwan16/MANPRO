@@ -2,7 +2,9 @@
 
 ## Current situation
 
-The ZIP is a **functional client-side demo**. Source imports `api` from `src/services/index.js` which currently binds to the `mockAdapter`. This state is persisted in `localStorage` and can be edited by anyone with local browser access. **Supabase is not connected, and payment is not live.** The purpose of the adapter pattern is to enable a secure replacement later.
+Authentication and task submissions now use Supabase when `VITE_APP_MODE=supabase`; checkout, entitlements, task drafts, and rubric evaluation still use the client-side demo adapter. Payment is not live, and scores are not sent from the browser as trusted values.
+
+The migration `supabase/migrations/202610200001_backend_core.sql` adds owner-scoped profile and attempt tables, extends the existing `user_submissions` table, enables RLS, and creates profiles on Auth signup. Apply it in the Supabase SQL editor before using submissions. Restart Vite after changing `.env`; Vite reads the mode and keys at startup. The browser timer is implemented for demo attempts; production deadline enforcement must move to a trusted server function.
 
 ## Implementation sequence
 
