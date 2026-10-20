@@ -1,33 +1,29 @@
 import { api } from "../services/index.js";
-import { tasks } from "../data/systemAnalyst.js";
-import { weightedScore, certificateEligible, submittedTask, RUBRIC_VERSION } from "../assessment/rubricEngine.js";
-import { CASE } from "../data/catalog.js";
-import { ico, A, scoreTag } from "../components/ui.js";
-import { esc } from "../utils/helpers.js";
+import { ico } from "../components/ui.js";
+import { esc, initials, displayName, avatarTone } from "../utils/helpers.js";
+import { simulations } from "../data/catalog.js";
 
-export function getReport(attemptId) {
-  const a = attemptId ? api.getAttempt(attemptId) : api.getActive();
-  if (!a || !tasks.every((t) => Boolean(submittedTask(a?.tasks?.[t.id])))) return null;
-  return {
-    a,
-    score: weightedScore(tasks, a),
-    eligible: certificateEligible(tasks, a),
-  };
-}
+export function ProfilePage() {
+  const user = api.state().user;
+  if (!user) return `<section class="container page-pad empty-state"><h2>Masuk terlebih dahulu</h2></section>`;
 
-export function incompletePage(title) {
-  const a = api.getActive();
-  return `<section class="container page-pad empty-state">${ico("lock")}<h1>${esc(title)}</h1><p>Selesaikan semua tugas untuk melihat hasil lengkap.</p>${A(a ? "workspace/" + (tasks.find((t) => !submittedTask(a.tasks[t.id]))?.id || "requirements") : "welcome", `Lanjutkan Simulasi ${ico("arrow")}`, "primary")}</section>`;
-}
+  const education = [user.educationLevel, user.major, user.institution]
+    .filter(Boolean)
+    .join(" · ");
 
-export function ReportPage(attemptId) {
-  const result = getReport(attemptId),
-    suffix = attemptId ? `/${encodeURIComponent(attemptId)}` : "";
-  if (!result) return incompletePage("Laporan Kinerja belum tersedia");
-  return `<section class="container page-pad report-page"><div class="breadcrumbs"><a href="#/dashboard">Dashboard</a>${ico("chevron")}<span>Laporan Kinerja</span></div><div class="report-hero"><div><div class="eyebrow">LAPORAN KINERJA SIMULASI</div><h1>Hasil kerja <span>proyekmu.</span></h1><p>${esc(CASE.name)} · PT Nusa Digital Solusi · Perusahaan fiktif</p><span class="report-complete-status">${ico("check-circle")} Selesai · ${tasks.length} tugas dikirim</span></div><div class="report-icon">${ico("chart")}</div></div><div class="report-summary"><div><span>RATA-RATA TERTIMBANG</span><strong>${result.score}<small>/100</small></strong></div><div><span>TUGAS SELESAI</span><strong>${tasks.length}<small>/${tasks.length}</small></strong></div></div><div class="report-actions">${A("portfolio" + suffix, `Buka Portofolio ${ico("file")}`, "primary")}${result.eligible ? A("certificate" + suffix, `Lihat Sertifikat ${ico("award")}`, "outline") : ""}<button class="btn btn-light" data-act="download-report">${ico("download")} Unduh Laporan (.md)</button></div><div class="report-card-list">${tasks
-    .map((task) => {
-      const submission = submittedTask(result.a.tasks[task.id]);
-      return `<article class="content-panel report-task"><div class="report-task-head"><div><div class="eyebrow">TUGAS ${task.number} · ${esc(task.deliverable.toUpperCase())}</div><h2>${esc(task.title)}</h2></div>${scoreTag(submission.assessment.score)}</div><p class="report-task-intro">Penilaian per aspek</p><ul class="report-rubric-list">${submission.assessment.breakdown.map((item) => `<li><b>${esc(item.label)}</b><span>${item.earned}/${item.max}</span><p>${esc(item.feedback)}</p></li>`).join("")}</ul>${A("portfolio" + suffix, `Lihat ${esc(task.deliverable)}${ico("arrow")}`, "light")}</article>`;
-    })
-    .join("")}</div><div class="report-bottom-note">${ico("shield")} <span>Skor berasal dari jawaban yang dikirim dan rubrik ${esc(RUBRIC_VERSION)}. Bobot tugas: ${tasks.map((task) => task.weight + "%").join(" / ")}. Hasil ini menggambarkan performa pada simulasi, bukan jaminan kesiapan kerja.</span></div></section>`;
+  return `<section class="container page-pad profile-page"><div class="eyebrow">AKUN SAYA</div><h1 class="page-title">Profil & personalisasi</h1><p class="page-intro">Lengkapi profilmu agar minat dan latar belakangmu tersimpan bersama hasil latihan.</p>
+    <div class="profile-layout"><aside class="content-panel profile-preview"><span class="profile-preview-label">PRATINJAU PROFIL</span><span class="profile-avatar profile-preview-avatar tone-${avatarTone(user)}">${esc(initials(displayName(user)))}</span><h2>${esc(displayName(user))}</h2><p class="profile-preview-email">${esc(user.email)}</p>${education ? `<p class="profile-education">${esc(education)}</p>` : ""}${user.city ? `<p class="profile-city">${esc(user.city)}</p>` : ""}<span class="profile-interest">${esc(simulations.find((item) => item.id === user.interest)?.role || "Belum memilih minat")}</span>${user.bio ? `<p class="profile-bio">${esc(user.bio)}</p>` : '<p class="profile-bio profile-bio-empty">Tulis perkenalan singkat agar profilmu lebih personal.</p>'}</aside>
+    <form id="profile-form" class="content-panel form-stack"><section class="profile-form-section"><div class="profile-section-heading"><h2>Informasi dasar</h2><p>Nama dan email yang digunakan pada akun ini.</p></div><div class="profile-fields"><label class="work-field"><span>Nama lengkap</span><input name="name" type="text" required minlength="2" maxlength="80" autocomplete="name" value="${esc(user.name)}"></label><label class="work-field"><span>Alamat email</span><input name="email" type="email" required autocomplete="email" value="${esc(user.email)}"></label><label class="work-field"><span>Nama panggilan <small>(opsional)</small></span><input name="nickname" type="text" maxlength="30" placeholder="Nama yang tampil di Dashboard" value="${esc(user.nickname || "")}"></label><label class="work-field"><span>Kota domisili <small>(opsional)</small></span><input name="city" type="text" maxlength="80" autocomplete="address-level2" placeholder="Contoh: Bandung" value="${esc(user.city || "")}"></label></div></section>
+    <section class="profile-form-section"><div class="profile-section-heading"><h2>Pendidikan</h2><p>Tambahkan latar belakang pendidikan jika ingin ditampilkan di profil.</p></div><div class="profile-fields"><label class="work-field"><span>Nama kampus <small>(opsional)</small></span><input name="institution" type="text" maxlength="100" placeholder="Contoh: Universitas Indonesia" value="${esc(user.institution || "")}"></label><label class="work-field"><span>Program studi <small>(opsional)</small></span><input name="major" type="text" maxlength="100" placeholder="Contoh: Sistem Informasi" value="${esc(user.major || "")}"></label><label class="work-field"><span>Jenjang pendidikan <small>(opsional)</small></span><select name="educationLevel"><option value="">Pilih jenjang</option>${["D3", "D4", "S1", "S2", "S3"].map((level) => `<option value="${level}" ${user.educationLevel === level ? "selected" : ""}>${level}</option>`).join("")}</select></label></div></section>
+    <section class="profile-form-section"><div class="profile-section-heading"><h2>Minat & tampilan</h2><p>Gunakan minatmu untuk menyesuaikan rekomendasi simulasi di Dashboard.</p></div><div class="profile-fields"><label class="work-field"><span>Posisi yang diminati <small>(opsional)</small></span><select name="interest"><option value="">Belum memilih posisi</option>${simulations.map((item) => `<option value="${esc(item.id)}" ${user.interest === item.id ? "selected" : ""}>${esc(item.role)}</option>`).join("")}</select></label><label class="work-field profile-field-full"><span>Perkenalan singkat <small>(opsional, maks. 240 karakter)</small></span><textarea name="bio" maxlength="240" rows="3" placeholder="Ceritakan bidang yang ingin kamu pelajari atau pengalaman yang relevan.">${esc(user.bio || "")}</textarea></label></div><fieldset class="profile-colors"><legend>Warna avatar</legend>${[
+      ["navy", "Biru tua"],
+      ["teal", "Hijau"],
+      ["purple", "Ungu"],
+    ]
+      .map(
+        ([color, label]) =>
+          `<label><input type="radio" name="avatarColor" value="${color}" ${avatarTone(user) === color ? "checked" : ""}><span class="profile-color-swatch tone-${color}"></span>${label}</label>`,
+      )
+      .join("")}</fieldset></section>
+    <p class="profile-help">Data profil dan progres hanya tersimpan di browser ini.</p><button class="btn btn-primary" type="submit">Simpan profil ${ico("check")}</button></form></div></section>`;
 }
