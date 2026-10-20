@@ -21,6 +21,26 @@ import {
 } from "./assessment/rubricEngine.js";
 import { api } from "./services/index.js";
 import { downloadText } from "./utils/storage.js";
+import { supabase } from './services/supabaseClient.js'
+
+async function saveSubmissionToSupabase(userEmail, taskId, answers, score) {
+  const { data, error } = await supabase
+    .from('user_submissions')
+    .insert([
+      {
+        user_email: userEmail,
+        task_id: taskId,
+        answers: answers, // Langsung passing objek JavaScript
+        score: score
+      }
+    ]);
+
+  if (error) {
+    console.error('Gagal menyimpan ke Supabase:', error.message);
+  } else {
+    console.log('Berhasil disimpan ke Supabase:', data);
+  }
+}
 
 const app = document.getElementById("app");
 const esc = (v) =>
@@ -944,10 +964,19 @@ document.addEventListener("submit", (e) => {
     } else if (form.id === "task-work-form") {
       const id = form.dataset.task;
       const cfg = taskById(id);
-      api.saveDraft(id, readForm(form, cfg));
+      const answers = readForm(form, cfg);
+
+      // Simpan draf lokal bawaan aplikasi
+      api.saveDraft(id, answers);
       const data = api.submitTask(id);
+
+      // --- KIRIM JUGA KE SUPABASE ---
+      const userEmail = state().user?.email || "anonymous@demo.com";
+      const score = data?.assessment?.score || 0;
+      saveSubmissionToSupabase(userEmail, id, answers, score);
+
       render(false);
-      toast("Tugas dinilai. Lihat hasil dan masukanmu.");
+      toast("Tugas dinilai dan tersimpan di database!");
     }
   } catch (err) {
     toast(err.message);
