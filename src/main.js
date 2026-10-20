@@ -8,15 +8,18 @@ import { Footer } from "./components/footer.js";
 import { toast } from "./components/ui.js";
 import { artifact } from "./components/artifacts.js";
 
-// Halaman Modular
+// Import Halaman Modular
 import { HomePage } from "./pages/home.js";
 import { DashboardPage } from "./pages/dashboard.js";
+import { DetailPage } from "./pages/detail.js";
 import { WorkspacePage } from "./pages/workspace.js";
+import { ProgressPage } from "./pages/progress.js";
 import { ProfilePage } from "./pages/profile.js";
 import { PortfolioPage, formatPortfolio } from "./pages/portfolio.js";
 import { ReportPage, formatReport } from "./pages/report.js";
 import { CertificatePage, downloadCertificate } from "./pages/certificate.js";
 import { InformationPage } from "./pages/information.js";
+import { ExplorePage } from "./pages/explore.js"; // <-- TAMBAHKAN IMPORT INI
 
 const app = document.getElementById("app");
 
@@ -30,15 +33,14 @@ const go = (target) => {
 
 const pendingKey = "simagang:v3:pending";
 const setPending = (target) => sessionStorage.setItem(pendingKey, target);
-const takePending = () => {
-  const x = sessionStorage.getItem(pendingKey);
-  sessionStorage.removeItem(pendingKey);
-  return x || "dashboard";
-};
 
 function frame(content, active = "home", options = {}) {
   const s = api.state();
-  return `<a class="skip-link" href="#page-content">Lewati ke konten utama</a>${Navbar(active, s)}<main id="page-content" class="${options.full ? "main-full" : "main-content"}">${content}</main>${Footer(s)}<div id="toast" role="status" aria-live="polite"></div>`;
+  return `<a class="skip-link" href="#page-content">Lewati ke konten utama</a>
+  ${Navbar(active, s)}
+  <main id="page-content" class="${options.full ? "main-full" : "main-content"}">${content}</main>
+  ${Footer(s)}
+  <div id="toast" role="status" aria-live="polite"></div>`;
 }
 
 function render(scroll = false) {
@@ -62,8 +64,17 @@ function render(scroll = false) {
     case "dashboard":
       view = signedDashboard ? DashboardPage() : HomePage();
       break;
+    case "explore": // <-- TAMBAHKAN CASE INI
+      view = ExplorePage();
+      break;
+    case "detail":
+      view = DetailPage(id);
+      break;
     case "workspace":
       view = WorkspacePage(id);
+      break;
+    case "progress": // <-- TAMBAHKAN CASE INI
+      view = ProgressPage();
       break;
     case "profile":
       view = ProfilePage();
@@ -92,6 +103,8 @@ function render(scroll = false) {
 
   if (scroll) window.scrollTo({ top: 0, behavior: "instant" });
 }
+
+// ... sisa kode listener event tetap sama ...
 
 window.addEventListener("hashchange", () => render(true));
 
