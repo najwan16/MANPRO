@@ -19,7 +19,8 @@ import { PortfolioPage, formatPortfolio } from "./pages/portfolio.js";
 import { ReportPage, formatReport } from "./pages/report.js";
 import { CertificatePage, downloadCertificate } from "./pages/certificate.js";
 import { InformationPage } from "./pages/information.js";
-import { ExplorePage } from "./pages/explore.js"; // <-- TAMBAHKAN IMPORT INI
+import { ExplorePage } from "./pages/explore.js";
+import { AuthPage } from "./pages/auth.js";
 
 const app = document.getElementById("app");
 
@@ -33,6 +34,11 @@ const go = (target) => {
 
 const pendingKey = "simagang:v3:pending";
 const setPending = (target) => sessionStorage.setItem(pendingKey, target);
+const takePending = () => {
+  const x = sessionStorage.getItem(pendingKey);
+  sessionStorage.removeItem(pendingKey);
+  return x || "dashboard";
+};
 
 function frame(content, active = "home", options = {}) {
   const s = api.state();
@@ -48,7 +54,9 @@ function render(scroll = false) {
   const [name, id] = value.split("/");
   const s = api.state();
   const signedDashboard = name === "dashboard" && !!s.user;
-  const protectedRoutes = ["checkout", "welcome", "workspace", "report", "portfolio", "certificate", "profile"];
+  
+  // Rute yang membutuhkan login terlebih dahulu
+  const protectedRoutes = ["progress", "checkout", "welcome", "workspace", "report", "portfolio", "certificate", "profile"];
 
   if (protectedRoutes.includes(name) && !s.user) {
     setPending(value);
@@ -64,7 +72,7 @@ function render(scroll = false) {
     case "dashboard":
       view = signedDashboard ? DashboardPage() : HomePage();
       break;
-    case "explore": // <-- TAMBAHKAN CASE INI
+    case "explore":
       view = ExplorePage();
       break;
     case "detail":
@@ -73,7 +81,7 @@ function render(scroll = false) {
     case "workspace":
       view = WorkspacePage(id);
       break;
-    case "progress": // <-- TAMBAHKAN CASE INI
+    case "progress":
       view = ProgressPage();
       break;
     case "profile":
@@ -87,6 +95,12 @@ function render(scroll = false) {
       break;
     case "certificate":
       view = CertificatePage(id);
+      break;
+    case "auth":
+      view = AuthPage(false);
+      break;
+    case "register":
+      view = AuthPage(true);
       break;
     case "about":
     case "help":
@@ -104,11 +118,9 @@ function render(scroll = false) {
   if (scroll) window.scrollTo({ top: 0, behavior: "instant" });
 }
 
-// ... sisa kode listener event tetap sama ...
-
 window.addEventListener("hashchange", () => render(true));
 
-// Realtime Input & Draf
+// --- REALTIME INPUT & AUTOSAVE DRAFT HANDLER ---
 document.addEventListener("input", (e) => {
   if (e.target.matches("[data-answer]") && e.target.closest("#task-work-form")) {
     const taskId = e.target.closest("form").dataset.task;
@@ -127,8 +139,31 @@ document.addEventListener("input", (e) => {
   }
 });
 
-// Submit Form Handler
+// --- SUBMIT FORM HANDLER ---
 document.addEventListener("submit", (e) => {
+  if (e.target.id === "auth-form") {
+    e.preventDefault();
+    const form = e.target;
+    const type = form.dataset.type;
+    const formData = new FormData(form);
+    const email = formData.get("email");
+    const name = formData.get("name") || email.split("@")[0];
+
+    try {
+      if (type === "register") {
+        api.register({ name, email });
+      } else {
+        api.login({ email });
+      }
+      const nextTarget = takePending();
+      go(nextTarget);
+      toast("Berhasil masuk!");
+    } catch (err) {
+      toast(err.message);
+    }
+    return;
+  }
+
   if (e.target.id === "profile-form") {
     e.preventDefault();
     const values = new FormData(e.target);
@@ -177,7 +212,7 @@ document.addEventListener("submit", (e) => {
   }
 });
 
-// Click Action Handler
+// --- GLOBAL CLICK ACTION HANDLER ---
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-act]");
   if (!t) return;
@@ -191,6 +226,17 @@ document.addEventListener("click", (e) => {
     case "toggle-menu": {
       const el = document.getElementById("mobile-nav");
       if (el) el.hidden = !el.hidden;
+      break;
+    }
+    case "save-work-draft": {
+      const form = document.getElementById("task-work-form");
+      if (form) {
+        const taskId = form.dataset.task;
+        const config = taskById(taskId);
+        const answers = readForm(form, config);
+        api.saveDraft(taskId, answers);
+        toast("Draf berhasil disimpan!");
+      }
       break;
     }
     case "download-current": {
@@ -225,4 +271,5 @@ document.addEventListener("click", (e) => {
   }
 });
 
+// Jalankan aplikasi
 render();

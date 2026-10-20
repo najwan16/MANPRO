@@ -1,10 +1,25 @@
-import { ico } from "../components/ui.js";
+import { api } from "../services/index.js";
+import { ico, A } from "../components/ui.js";
 
-export function AuthPage(mode = "login") {
-  const registering = mode === "register";
-  return `<section class="auth-page"><div class="container auth-shell"><div class="auth-card"><div class="eyebrow">AKUN SIMAGANG</div><h1>${registering ? "Daftar untuk mulai belajar." : "Selamat datang kembali."}</h1><p>${registering ? "Buat identitas demo untuk menyimpan progres latihan di browser ini." : "Masuk dengan identitas demo yang pernah kamu buat di browser ini."}</p>
-    <nav class="auth-switch" aria-label="Pilihan akses akun"><a href="#/auth" ${!registering ? 'aria-current="page"' : ""}>Masuk</a><a href="#/register" ${registering ? 'aria-current="page"' : ""}>Daftar</a></nav>
-    <form id="${registering ? "demo-register-form" : "demo-auth-form"}" class="form-stack">${registering ? `<label class="work-field"><span>Nama lengkap</span><input type="text" name="name" required minlength="2" maxlength="80" autocomplete="name" placeholder="Contoh: Andi Pratama" /></label>` : ""}<label class="work-field"><span>Alamat email</span><input type="email" name="email" required autocomplete="email" placeholder="nama@contoh.com" /></label><button type="submit" class="btn btn-primary btn-block">${registering ? "Daftar dan Lanjutkan" : "Masuk dan Lanjutkan"} ${ico("arrow")}</button></form>
-    <div class="auth-demo-note" role="note">${ico("shield")}<p>Mode demo: tidak memakai kata sandi atau verifikasi email. Gunakan email contoh; data akun dan progres hanya tersimpan di browser ini.</p></div><a class="auth-back" href="#/explore">${ico("arrow")} Kembali jelajahi simulasi</a></div>
-    <aside class="auth-side"><div class="eyebrow">MULAI DARI PEKERJAAN NYATA</div><h2>Latihan yang menghasilkan bukti pekerjaan.</h2><p>Kerjakan studi kasus, pahami masukan, lalu simpan hasil latihanmu.</p><div class="auth-benefit">${ico("briefcase")}<div><b>Satu proyek yang terarah</b><p>Tiga tugas analis sistem dalam satu kasus yang saling berkaitan.</p></div></div><div class="auth-benefit">${ico("target")}<div><b>Penilaian yang jelas</b><p>Umpan balik berasal dari jawaban dan rubrik setiap tugas.</p></div></div><div class="auth-benefit">${ico("file")}<div><b>Hasil yang bisa dibuka kembali</b><p>Laporan kinerja dan dokumen latihan tersimpan bersama progresmu.</p></div></div></aside></div></section>`;
+export function AuthPage(isRegister = false) {
+  return `<section class="container page-pad auth-page">
+    <div class="auth-card content-panel">
+      <div class="eyebrow">${isRegister ? "DAFTAR AKUN" : "MASUK AKUN"}</div>
+      <h1>${isRegister ? "Buat akun demo baru" : "Selamat datang kembali"}</h1>
+      <p>${isRegister ? "Daftar untuk menyimpan progres dan hasil latihanmu." : "Masuk dengan akun demo untuk melanjutkan simulasi."}</p>
+      
+      <form id="auth-form" data-type="${isRegister ? "register" : "login"}" class="form-stack">
+        ${isRegister ? `<label class="work-field"><span>Nama Lengkap</span><input name="name" type="text" required placeholder="Contoh: Alex Wijaya"></label>` : ""}
+        <label class="work-field">
+          <span>Alamat Email</span>
+          <input name="email" type="email" required placeholder="nama@email.com">
+        </label>
+        <button type="submit" class="btn btn-primary btn-lg">${isRegister ? "Daftar Akun" : "Masuk"} ${ico("arrow")}</button>
+      </form>
+      
+      <div class="auth-switch">
+        ${isRegister ? `Sudah punya akun? <a href="#/auth">Masuk di sini</a>` : `Belum punya akun? <a href="#/register">Daftar di sini</a>`}
+      </div>
+    </div>
+  </section>`;
 }
