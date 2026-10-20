@@ -24,5 +24,7 @@ export function artifact(config, answers = {}) {
   if (config.id === "validation")
     return `<div class="artifact-doc"><div class="artifact-doc-title">REQUIREMENT VALIDATION LOG <span>#SA-03</span></div>${config.fields.map((f) => `<div class="artifact-record"><b>${esc(f.label)}</b><p>${esc(fieldName(f, answers[f.id]))}</p></div>`).join("")}</div>`;
 
+  if (config.fields?.length)
+    return `<div class="artifact-doc"><div class="artifact-doc-title">${esc(config.deliverable || "Dokumen tugas")}</div>${config.fields.map((field) => `<div class="artifact-record"><b>${esc(field.label)}</b><p>${esc(fieldName(field, answers[field.id]))}</p></div>`).join("")}</div>`;
   return `<div class="artifact-doc">Belum ada artefak.</div>`;
 }

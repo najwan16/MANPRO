@@ -1,7 +1,7 @@
 import { ico, A, pill, art, logo } from "../components/ui.js";
 import { esc, sectionTitle } from "../utils/helpers.js";
-import { simulations, getCompany, rupiah } from "../data/catalog.js";
-import { tasks } from "../data/systemAnalyst.js";
+import { simulations, getCompany, getSimulationTasks, rupiah } from "../data/catalog.js";
+import { api } from "../services/index.js";
 
 const catalogCategory = (p) =>
   p.id === "uiux-designer"
@@ -12,10 +12,12 @@ const catalogCategory = (p) =>
 
 export function productCard(p) {
   const c = getCompany(p.company);
-  return `<article class="sim-card"><div class="sim-art-link">${art(p.icon)}</div><div class="sim-body"><div class="sim-brand">${logo(c)}<span>${esc(c.name)}<small>Perusahaan fiktif</small></span></div><div class="pill-row">${pill(p.status === "ready" ? "Tersedia" : "Segera Hadir", p.status === "ready" ? "green" : "gray")}${pill(catalogCategory(p), "soft")}</div><h3>${esc(p.role)}</h3><p class="sim-description">${esc(p.teaser)}</p><div class="chip-row">${p.skills
+  const hasAccess = api.hasAccess(p.id);
+  const availability = p.status !== "ready" ? "Segera Hadir" : hasAccess ? "Simulasi Aktif" : "Tersedia";
+  return `<article class="sim-card"><div class="sim-art-link">${art(p.icon)}</div><div class="sim-body"><div class="sim-brand">${logo(c)}<span>${esc(c.name)}<small>Perusahaan fiktif</small></span></div><div class="pill-row">${pill(availability, p.status === "ready" ? "green" : "gray")}${pill(catalogCategory(p), "soft")}</div><h3>${esc(p.role)}</h3><p class="sim-description">${esc(p.teaser)}</p><div class="chip-row">${p.skills
     .slice(0, 2)
     .map((x) => `<span class="chip">${esc(x)}</span>`)
-    .join("")}</div><div class="sim-bottom"><span class="catalog-card-meta">${p.status === "ready" ? `${tasks.length} tugas · ${rupiah(p.price)}` : "Pratinjau · Belum dijual"}</span><a href="#/detail/${p.id}" class="text-link">Lihat Rincian ${ico("arrow")}</a></div></div></article>`;
+    .join("")}</div><div class="sim-bottom"><span class="catalog-card-meta">${getSimulationTasks(p).length} tugas · ${rupiah(p.price)}</span><a href="#/detail/${p.id}" class="text-link">Lihat Rincian ${ico("arrow")}</a></div></div></article>`;
 }
 
 export function HomePage() {

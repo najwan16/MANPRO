@@ -1,6 +1,12 @@
-# Proposed Supabase PostgreSQL Data Model (NOT DEPLOYED)
+# Supabase PostgreSQL Data Model
 
-All database tables below are **design proposals only**. The shipped ZIP uses localStorage mock state. Build migrations and RLS before production.
+The deployable catalog schema is in `supabase/migrations/202610200001_simulation_catalog.sql`. Per-user snapshots are added by `supabase/migrations/202610200002_user_app_state.sql`. Apply both migrations, then run `scripts/seed-supabase-catalog.mjs` locally with a service-role key. In Supabase mode, the frontend reads companies, simulations, and task definitions from the database. It loads and persists each user's access, attempts, drafts, timers, submissions, profile details, and dashboard counts through `user_app_state`.
+
+`user_app_state` is a compatibility snapshot for the current synchronous frontend. The normalized `simulation_entitlements`, `simulation_attempts`, and `simulation_submissions` tables are defined for a later backend step; current frontend mutations are not yet written to those tables.
+
+## Legacy proposed model
+
+The original model below is retained for reference.
 
 ## Entity schema
 

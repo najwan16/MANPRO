@@ -17,8 +17,9 @@ test('demo registration and sign-in preserve the saved identity',()=>{
 test('free challenge scores answers rather than fabricating a weak result',()=>{
   api.reset();const good=api.submitFree(correct(freeTask));assert.equal(good.assessment.score,100);
   assert.equal(api.getFree().assessment.score,100);assert.equal(api.getActive(),null);assert.equal(api.hasAccess('system-analyst'),false);
+  assert.equal(api.submitFree(incorrect(freeTask)).assessment.score,100,'a second submit is idempotent until the preview is restarted');
+  api.restartFree();assert.throws(()=>api.submitFree({}),/Lengkapi/);
   const bad=api.submitFree(incorrect(freeTask));assert.ok(bad.assessment.score<100);
-  assert.throws(()=>api.submitFree({}),/Lengkapi/);
   api.login('Tamu A','tamu.a@example.com');assert.equal(api.getFree().assessment.score,bad.assessment.score,'guest preview follows its owner after login');
   api.logout();api.login('Tamu B','tamu.b@example.com');assert.equal(api.getFree(),null,'another user cannot read preview answers');
 });
@@ -27,11 +28,12 @@ test('checkout grants scoped access; each task is submitted once',()=>{
   api.login('Andi Pratama','andi@example.com');
   assert.equal(api.hasAccess('system-analyst'),false);
   assert.throws(()=>api.startAttempt(),/Aktifkan/);
-  assert.throws(()=>api.checkout('data-analyst','qris'),/belum tersedia/);
+  api.checkout('data-analyst','qris');assert.equal(api.hasAccess('data-analyst'),true);
+  assert.equal(api.state().orders[0].amount,29000);
   api.checkout('system-analyst','qris');assert.equal(api.hasAccess('system-analyst'),true);
-  assert.equal(api.state().orders[0].amount,19000);
+  assert.equal(api.state().orders[1].amount,19000);
   assert.throws(()=>api.checkout('system-analyst','qris'),/sudah aktif/);
-  assert.equal(api.state().orders.length,1,'repeat checkout cannot create another order');
+  assert.equal(api.state().orders.length,2,'repeat checkout cannot create another order');
   const attempt=api.startAttempt();assert.ok(attempt.id);
   assert.throws(()=>api.submitTask('userstory'),/Selesaikan/);
   for(const config of tasks){
@@ -49,7 +51,8 @@ test('checkout grants scoped access; each task is submitted once',()=>{
   api.login('Nia Lestari','nia@example.com');assert.equal(api.hasAccess('system-analyst'),false);assert.equal(api.getAttempt(attempt.id),null);
   assert.equal(api.getActive(),null);
   api.login('Andi Pratama','andi@example.com');assert.equal(api.hasAccess('system-analyst'),true);
-  assert.equal(api.getActive().id,attempt.id,'owner can resume after sign-out');
+  assert.ok(api.getAttempt(attempt.id),'completed attempt and its results remain available after sign-in');
+  assert.equal(api.getActive(),null,'completed work is not treated as an active session');
 });
 test('draft survives logout and does not raise progress before submission',()=>{
   api.reset();api.login('Dina','dina@example.com');api.checkout('system-analyst','qris');api.startAttempt();
@@ -81,7 +84,7 @@ test('dashboard recommendations and counts use the signed-in user data',()=>{
   api.submitFree(incorrect(freeTask));
   summary=api.getDashboardSummary();assert.equal(summary.recommendations[0].simulation.id,'system-analyst');assert.equal(summary.recommendations[0].reason,'Berdasarkan hasil latihanmu');
   api.updateProfile({name:'Alya',email:'alya@example.com',nickname:'',interest:'uiux-designer',avatarColor:'navy'});
-  summary=api.getDashboardSummary();assert.equal(summary.recommendations[1].simulation.id,'uiux-designer');assert.equal(summary.recommendations[1].simulation.status,'soon');
+  summary=api.getDashboardSummary();assert.equal(summary.recommendations[1].simulation.id,'uiux-designer');assert.equal(summary.recommendations[1].simulation.status,'ready');
   api.checkout('system-analyst','qris');api.startAttempt();
   summary=api.getDashboardSummary();assert.equal(summary.joinedCount,1);assert.equal(summary.active.finishedTasks,0);assert.equal(summary.active.nextTaskId,'requirements');
   let mySimulations=api.getMySimulations();assert.equal(mySimulations.length,1);assert.equal(mySimulations[0].status,'in-progress');assert.equal(mySimulations[0].percent,0);
