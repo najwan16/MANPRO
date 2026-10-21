@@ -53,6 +53,27 @@
 			"command": "npm run build",
 			"isBackground": false,
 			"problemMatcher": []
+		},
+		{
+			"label": "Validate password confirmation",
+			"type": "shell",
+			"command": "npm run check",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Run regression tests",
+			"type": "shell",
+			"command": "npm test",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Build updated auth UI",
+			"type": "shell",
+			"command": "npm run build",
+			"isBackground": false,
+			"problemMatcher": []
 		}
 	]
 }
