@@ -1,0 +1,58 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Install project dependencies",
+			"type": "shell",
+			"command": "npm install",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Validate project",
+			"type": "shell",
+			"command": "npm run check",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Build project",
+			"type": "shell",
+			"command": "npm run build",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run tests",
+			"type": "shell",
+			"command": "npm test",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Validate password form",
+			"type": "shell",
+			"command": "npm run check",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Run authentication tests",
+			"type": "shell",
+			"command": "npm test",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Build authentication UI",
+			"type": "shell",
+			"command": "npm run build",
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}
