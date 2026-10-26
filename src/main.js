@@ -24,10 +24,14 @@ import { DetailPage } from "./pages/detail.js";
 import { ProgressPage } from "./pages/progress.js";
 import { FreePage, FreeResultPage } from "./pages/free.js";
 import { CheckoutPage } from "./pages/checkout.js";
+import { AdminPage, adminSimulationPayload } from "./pages/admin.js";
 
 const app = document.getElementById("app");
 const catalogFilters = { search: "", category: "all" };
 let entitlementRefresh = null;
+let adminAccess = false;
+let adminCatalog = null;
+let adminCatalogLoading = false;
 const resolveTaskConfig = (id) => {
   const projectTask = getProjectTask(id);
   if (projectTask) return {
@@ -66,7 +70,7 @@ const takePending = () => {
 };
 
 function frame(content, active = "home", options = {}) {
-  const s = api.state();
+  const s = { ...api.state(), isAdmin: adminAccess };
   return `<a class="skip-link" href="#page-content">Lewati ke konten utama</a>${Navbar(active, s)}<main id="page-content" class="${options.full ? "main-full" : "main-content"}">${content}</main>${Footer(s)}<div id="toast" role="status" aria-live="polite"></div>`;
 }
 
@@ -81,7 +85,7 @@ function render(scroll = false) {
   }
   const s = api.state();
   const signedDashboard = name === "dashboard" && !!s.user;
-  const protectedRoutes = ["checkout", "welcome", "workspace", "report", "portfolio", "certificate", "profile", "restart"];
+  const protectedRoutes = ["checkout", "welcome", "workspace", "report", "portfolio", "certificate", "profile", "restart", "admin"];
 
   if (name === "free" && id === "start") {
     const simulationId = subId || "system-analyst";
@@ -93,6 +97,11 @@ function render(scroll = false) {
   if (protectedRoutes.includes(name) && !s.user) {
     setPending(value);
     go("auth");
+    return;
+  }
+  if (name === "admin" && s.user && !adminAccess) {
+    go("dashboard");
+    toast(isSupabase ? "Akun ini belum memiliki akses admin." : "Ruang admin hanya tersedia melalui autentikasi Supabase.");
     return;
   }
   if (name === "checkout" && s.user && api.hasAccess(id || "system-analyst")) {
@@ -182,6 +191,19 @@ function render(scroll = false) {
       break;
     case "certificate":
       view = CertificatePage(id);
+      break;
+    case "admin":
+      view = AdminPage(adminCatalog);
+      if (!adminCatalog && !adminCatalogLoading) {
+        adminCatalogLoading = true;
+        authApi.getAdminCatalog().then((data) => {
+          adminCatalog = data;
+          if (route().split("/")[0] === "admin") render();
+        }).catch((error) => {
+          console.error("Admin catalog load failed:", error);
+          toast(error.message || "Katalog admin gagal dimuat.");
+        }).finally(() => { adminCatalogLoading = false; });
+      }
       break;
     case "about":
     case "help":
@@ -315,12 +337,14 @@ document.addEventListener("submit", async (e) => {
             return;
           }
           await api.connectUser(user);
+          adminAccess = await authApi.isCurrentUserAdmin();
         } else api.registerDemo(name, email);
       } else {
         const email = String(values.get("email") || "");
         if (isSupabase) {
           const { user } = await authApi.signIn({ email, password: String(values.get("password") || "") });
           await api.connectUser(user);
+          adminAccess = await authApi.isCurrentUserAdmin();
         } else api.signInDemo(email);
       }
       location.hash = "#/" + takePending();
@@ -395,6 +419,8 @@ document.addEventListener("click", async (e) => {
         break;
       }
       await api.disconnectUser();
+      adminAccess = false;
+      adminCatalog = null;
       go("dashboard");
       break;
     case "toggle-menu": {
@@ -431,6 +457,60 @@ document.addEventListener("click", async (e) => {
     case "print":
       window.print();
       break;
+    case "admin-new-simulation": {
+      const form = document.getElementById("admin-simulation-form");
+      if (!form) break;
+      form.reset();
+      form.elements.id.readOnly = false;
+      form.elements.definition.value = JSON.stringify({ category: "Teknologi Informasi", level: "Pemula", duration: "90 menit", skills: [], tools: [], summary: "", description: "", about: "", caseName: "", caseProblem: "", deliverable: "" }, null, 2);
+      form.elements.tasks.value = "[]";
+      document.getElementById("admin-editor-title").textContent = "Buat simulasi baru";
+      document.getElementById("admin-editor")?.scrollIntoView({ behavior: "smooth" });
+      break;
+    }
+    case "admin-edit-simulation": {
+      const form = document.getElementById("admin-simulation-form");
+      if (!form) break;
+      try {
+        const payload = JSON.parse(t.dataset.payload);
+        for (const key of ["id", "role_name", "title", "company_id", "price_idr", "status"]) form.elements[key].value = payload.simulation[key] ?? "";
+        form.elements.id.readOnly = true;
+        form.elements.definition.value = JSON.stringify(payload.simulation.definition, null, 2);
+        form.elements.tasks.value = JSON.stringify(payload.tasks, null, 2);
+        document.getElementById("admin-editor-title").textContent = `Edit ${payload.simulation.role_name}`;
+        document.getElementById("admin-editor")?.scrollIntoView({ behavior: "smooth" });
+      } catch (error) { toast("Data simulasi gagal dibuka."); }
+      break;
+    }
+    case "admin-reset-form":
+      document.querySelector('[data-act="admin-new-simulation"]')?.click();
+      break;
+  }
+});
+
+document.addEventListener("submit", async (e) => {
+  if (e.target.id === "admin-company-form") {
+    e.preventDefault();
+    try {
+      const values = new FormData(e.target);
+      await authApi.saveAdminCompany({ id: String(values.get("id")).trim(), name: String(values.get("name")).trim(), definition: {
+        initials: String(values.get("initials")).trim().toUpperCase(), color: values.get("color"), desc: String(values.get("desc")).trim(),
+      } });
+      adminCatalog = await authApi.getAdminCatalog();
+      render();
+      toast("Perusahaan disimpan ke Supabase.");
+    } catch (error) { toast(error.message || "Perusahaan gagal disimpan."); }
+    return;
+  }
+  if (e.target.id === "admin-simulation-form") {
+    e.preventDefault();
+    try {
+      const payload = adminSimulationPayload(e.target, new FormData(e.target));
+      await authApi.saveAdminSimulation(payload.simulation, payload.tasks);
+      adminCatalog = await authApi.getAdminCatalog();
+      render();
+      toast("Simulasi dan tugas disimpan ke Supabase.");
+    } catch (error) { toast(error.message || "Simulasi gagal disimpan."); }
   }
 });
 
@@ -444,6 +524,8 @@ async function bootApp() {
       const session = await authApi.getSession();
       if (session?.user?.email) {
         await api.connectUser(session.user);
+        try { adminAccess = await authApi.isCurrentUserAdmin(); }
+        catch (error) { adminAccess = false; console.warn("Admin role lookup failed:", error.message); }
       } else await api.disconnectUser();
     } catch (error) {
       await api.disconnectUser();
