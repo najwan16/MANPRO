@@ -1,4 +1,4 @@
-import { esc } from "../utils/helpers.js";
+﻿import { esc } from "../utils/helpers.js";
 
 export const iconPaths = {
   briefcase: '<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M3 12h18M10 12v2h4v-2"/>',
@@ -65,15 +65,24 @@ export function toast(message) {
 }
 
 export function optionInput(f, current) {
-  if (f.type === "textarea")
-    return `<label class="work-field"><span>${esc(f.label)} <small style="color:#8b99ac;font-weight:500">· Dicatat pada portofolio, tidak dinilai otomatis</small></span><textarea data-answer="${f.id}" name="${f.id}" rows="4" minlength="${f.minlength || 1}" required placeholder="${esc(f.placeholder || "Tuliskan hasil analisismu...")}">${esc(current || "")}</textarea></label>`;
+  if (f.type === "file") {
+    const existing = current && typeof current === "object" ? current : null;
+    const maxSize = Number(f.maxFileSizeMB) || 10;
+    return `<label class="work-field"><span>${esc(f.label)}</span><input type="file" data-answer="${f.id}" name="${f.id}" accept="${esc(f.accept || ".pdf,.doc,.docx,.zip")}" data-max-file-size-mb="${maxSize}" data-existing-file="${esc(existing ? JSON.stringify(existing) : "")}" ${existing ? "" : "required"}/><small>Format: ${esc(f.accept || ".pdf,.doc,.docx,.zip")} · Maksimal ${maxSize} MB.</small>${existing ? `<small>File sebelumnya: ${esc(existing.name)}. Pilih kembali jika ingin mengganti file.</small>` : ""}</label>`;
+  }
+  if (f.type === "text") return `<label class="work-field"><span>${esc(f.label)}</span><input type="text" data-answer="${f.id}" name="${f.id}" required minlength="${f.minlength || 1}" maxlength="${f.maxlength || 500}" value="${esc(current || "")}" placeholder="${esc(f.placeholder || "Tulis jawaban singkat...")}" /></label>`;
+  if (f.type === "textarea") {
+    const codeBlock = f.codeSnippet ? `<div class="answer-code-block"><span>${esc(f.codeLanguage || "Kode")}</span><pre><code>${esc(f.codeSnippet)}</code></pre></div>` : "";
+    return `${codeBlock}<label class="work-field"><span>${esc(f.label)} <small style="color:#8b99ac;font-weight:500">· Dicatat pada portofolio, tidak dinilai otomatis</small></span><textarea data-answer="${f.id}" name="${f.id}" rows="4" minlength="${f.minlength || 1}" required placeholder="${esc(f.placeholder || "Tuliskan hasil analisismu...")}">${esc(current || "")}</textarea></label>`;
+  }
   if (f.type === "multi") {
     const v = Array.isArray(current) ? current : [];
     return `<fieldset class="work-field" data-max-selections="${f.maxSelections || ""}"><legend>${esc(f.label)}</legend><div class="checkbox-grid">${f.options.map(([val, label]) => `<label class="check-option"><input type="checkbox" data-answer="${f.id}" data-max-selections="${f.maxSelections || ""}" name="${f.id}" value="${esc(val)}" ${v.includes(val) ? "checked" : ""}/><span>${esc(label)}</span></label>`).join("")}</div></fieldset>`;
   }
   return `<label class="work-field"><span>${esc(f.label)}</span><select data-answer="${f.id}" name="${f.id}" required>${f.options.map(([val, label]) => `<option value="${esc(val)}" ${val === (current || "") ? "selected" : ""} ${!val ? "disabled" : ""}>${esc(label)}</option>`).join("")}</select></label>`;
 }
-
 export function feedbackList(assessment, showMax = true) {
   return `<div class="feedback-items">${assessment.breakdown.map((b, i) => `<div class="feedback-item ${b.correct ? "feedback-ok" : "feedback-improve"}"><span class="feedback-status">${ico(b.correct ? "check-circle" : "alert")}</span><div><div class="feedback-top"><b>Aspek ${i + 1}</b><span>${b.earned}/${b.max}${showMax ? " poin" : ""}</span></div><p class="feedback-field-label">${esc(b.label)}</p><p>${esc(b.feedback)}</p></div></div>`).join("")}</div>`;
 }
+
+

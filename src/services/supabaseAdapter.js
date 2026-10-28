@@ -81,6 +81,48 @@ export const supabaseAdapter = {
     for (const result of [companies, simulations, tasks]) if (result.error) throw result.error;
     return { companies: companies.data || [], simulations: simulations.data || [], tasks: tasks.data || [] };
   },
+  async uploadSubmissionFile(file, attemptId, taskId, fieldId) {
+    if (!authenticatedUserId) throw new Error("Sesi masuk tidak ditemukan. Silakan masuk kembali.");
+    const cleanName = String(file.name || "upload")
+      .normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "_").slice(-120);
+    const path = `${authenticatedUserId}/${attemptId}/${taskId}/${fieldId}-${crypto.randomUUID()}-${cleanName}`;
+    const { error } = await requireSupabase().storage.from("simulation-submissions").upload(path, file, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+    if (error) throw error;
+    return { name: file.name, size: file.size, type: file.type, storagePath: path };
+  },
+  async getManualReviews() {
+    const { data, error } = await requireSupabase().from("simulation_submissions")
+      .select("attempt_id,task_id,review_status,manual_score,manual_feedback,reviewed_at")
+      .in("review_status", ["pending", "reviewed"]);
+    if (error) throw error;
+    return data || [];
+  },
+  async getAdminSubmissionReviews() {
+    const client = requireSupabase();
+    const { data, error } = await client.rpc("admin_list_submission_reviews");
+    if (error) throw error;
+    return Promise.all((data || []).map(async (review) => {
+      const files = [];
+      for (const [fieldId, answer] of Object.entries(review.answers || {})) {
+        if (!answer?.storagePath) continue;
+        const { data: signed, error: signError } = await client.storage
+          .from("simulation-submissions").createSignedUrl(answer.storagePath, 600);
+        files.push({ fieldId, name: answer.name || fieldId, url: signError ? "" : signed?.signedUrl || "" });
+      }
+      return { ...review, files };
+    }));
+  },
+  async saveManualReview(submissionId, score, feedback) {
+    const { error } = await requireSupabase().rpc("admin_review_submission", {
+      p_submission_id: submissionId,
+      p_score: Number(score),
+      p_feedback: String(feedback || "").trim(),
+    });
+    if (error) throw error;
+  },
   async saveAdminCompany(company) {
     const { error } = await requireSupabase().from("simulation_companies").upsert({
       id: company.id, name: company.name, definition: company.definition, updated_at: new Date().toISOString(),

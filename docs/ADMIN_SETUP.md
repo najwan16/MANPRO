@@ -2,6 +2,8 @@
 
 Admin masuk menggunakan halaman autentikasi Supabase yang sama dengan pelamar. Role admin tidak dapat dipilih saat registrasi; pemilik project harus memberikan role secara manual.
 
+Pastikan `.env` menggunakan `VITE_APP_MODE=supabase`, lalu restart server setelah mengubahnya. Mode peserta demo tidak menyediakan akses Admin Studio.
+
 ## Memberikan akses admin
 
 1. Buat akun melalui registrasi aplikasi dan selesaikan verifikasi email.

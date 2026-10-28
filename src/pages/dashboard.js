@@ -3,6 +3,7 @@ import { ico, A } from "../components/ui.js";
 import { esc, dated, displayName, avatarTone, initials } from "../utils/helpers.js";
 import { CASE, getCompany, getSimulation, getSimulationTasks } from "../data/catalog.js";
 import { taskById, tasks } from "../data/systemAnalyst.js";
+import { certificateEligible } from "../assessment/rubricEngine.js";
 
 export function DashboardPage() {
   const s = api.state();
@@ -18,6 +19,7 @@ export function DashboardPage() {
   const recent = summary.recentCompleted;
   const recentSimulation = recent ? getSimulation(recent.simulationId) : null;
   const recentTaskList = getSimulationTasks(recentSimulation);
+  const recentHasCertificate = Boolean(recent && certificateEligible(recentTaskList, recent));
   const recentFinishedAt = recent && recentTaskList.map((task) => recent.tasks[task.id]?.final?.submittedAt).filter(Boolean).sort().at(-1);
   const resultRoute = recent ? `/${encodeURIComponent(recent.id)}` : "";
   const recentResultRoute = recent ? `report${resultRoute}` : "explore";
@@ -42,6 +44,6 @@ export function DashboardPage() {
       )
       .join("")}</div></section>
     
-    <section class="dashboard-section" aria-labelledby="dashboard-results-title"><div class="dashboard-section-heading"><div><span class="dashboard-kicker">HASIL PEKERJAAN</span><h2 id="dashboard-results-title">Hasil simulasimu</h2></div></div><div class="dashboard-results-card">${recent ? `<div class="dashboard-results-main"><span class="dashboard-results-icon">${ico("file")}</span><div><span class="dashboard-results-status">Selesai</span><h3>${esc(recentSimulation?.role || "Simulasi")}</h3><p>${esc(recentSimulation?.caseName || CASE.name)} · ${dated(recentFinishedAt || recent.createdAt)}</p></div></div><div class="dashboard-results-links">${recentSimulation?.id === "system-analyst" ? `${A(recentResultRoute, "Laporan Kinerja", "light")}${A(`portfolio${resultRoute}`, "Portofolio", "light")}` : `${A(recentResultRoute, "Lihat Hasil Simulasi", "light")}${A("progress", "Progres Saya", "light")}`}</div>` : `<div class="dashboard-results-main"><span class="dashboard-results-icon">${ico("file")}</span><div><h3>Hasilmu akan tampil di sini</h3><p>Selesaikan simulasi untuk melihat laporan dan portofoliomu.</p></div></div>`}</div></section>
+    <section class="dashboard-section" aria-labelledby="dashboard-results-title"><div class="dashboard-section-heading"><div><span class="dashboard-kicker">HASIL PEKERJAAN</span><h2 id="dashboard-results-title">Hasil simulasimu</h2></div></div><div class="dashboard-results-card">${recent ? `<div class="dashboard-results-main"><span class="dashboard-results-icon">${ico("file")}</span><div><span class="dashboard-results-status">Selesai</span><h3>${esc(recentSimulation?.role || "Simulasi")}</h3><p>${esc(recentSimulation?.caseName || CASE.name)} · ${dated(recentFinishedAt || recent.createdAt)}</p></div></div><div class="dashboard-results-links">${A(recentResultRoute, "Laporan Kinerja", "light")}${A(`portfolio${resultRoute}`, "Portofolio", "light")}${recentHasCertificate ? A(`certificate${resultRoute}`, "Sertifikat", "light") : ""}</div>` : `<div class="dashboard-results-main"><span class="dashboard-results-icon">${ico("file")}</span><div><h3>Hasilmu akan tampil di sini</h3><p>Selesaikan simulasi untuk melihat laporan dan portofoliomu.</p></div></div>`}</div></section>
   </div></section>`;
 }

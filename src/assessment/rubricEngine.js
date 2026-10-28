@@ -25,6 +25,11 @@ export function isComplete(config,answers={}) {
 // Data lama tetap dapat dibaca setelah alur dua versi dihapus.
 export function submittedTask(data) {return data?.final||data?.v2||data?.v1||null;}
 export function weightedScore(tasks,attempt) {
+  const pendingManualReview=tasks.some(task=>{
+    const submission=submittedTask(attempt?.tasks?.[task.id]);
+    return task.manualReview&&submission&&submission.assessment?.score==null;
+  });
+  if(pendingManualReview)return null;
   const available=tasks.map(task=>{
     const assessment=submittedTask(attempt?.tasks?.[task.id])?.assessment;
     const score=Number(assessment?.score);
@@ -36,4 +41,4 @@ export function weightedScore(tasks,attempt) {
   return totalWeight?Math.round(available.reduce((sum,item)=>sum+item.score*item.weight,0)/totalWeight):null;
 }
 export function completion(tasks,attempt) {return tasks.every(t=>Boolean(submittedTask(attempt?.tasks?.[t.id])));}
-export function certificateEligible(tasks,attempt) {return completion(tasks,attempt)&&weightedScore(tasks,attempt)>=70;}
+export function certificateEligible(tasks,attempt) {return completion(tasks,attempt)&&tasks.every(task=>{const submission=submittedTask(attempt?.tasks?.[task.id]);return !task.manualReview||(submission?.assessment?.score!=null&&Number.isFinite(Number(submission.assessment.score)));})&&weightedScore(tasks,attempt)>=70;}

@@ -3,15 +3,11 @@ import { productCard } from "./home.js";
 import { ico } from "../components/ui.js";
 import { esc } from "../utils/helpers.js";
 
-const catalogCategory = (p) =>
-  p.id === "uiux-designer"
-    ? "Desain"
-    : p.id === "digital-marketing"
-      ? "Bisnis dan Pemasaran"
-      : "Teknologi Informasi";
+const catalogCategory = (p) => p.category || "Lainnya";
 
 export function ExplorePage(filters) {
-  return `<section class="container page-pad explore-page"><div class="eyebrow">KATALOG SIMULASI</div><h1 class="page-title">Jelajahi Simulasi</h1><p class="page-intro">Temukan bidang pekerjaan dan coba pengalaman kerja sesuai minatmu.</p><div class="filter-panel explore-filters"><label class="search-wrap">${ico("search")}<input id="catalog-search" type="search" placeholder="Cari posisi atau perusahaan..." value="${esc(filters.search)}" aria-label="Cari posisi atau perusahaan" /></label><label class="select-wrap">Bidang <select id="catalog-category"><option value="all">Semua</option>${["Teknologi Informasi", "Desain", "Bisnis dan Pemasaran"].map((category) => `<option value="${category}" ${filters.category === category ? "selected" : ""}>${category}</option>`).join("")}</select></label></div><div id="catalog-container" aria-live="polite"></div></section>`;
+  const categories = [...new Set(simulations.map(catalogCategory))].sort((a, b) => a.localeCompare(b, "id"));
+  return `<section class="container page-pad explore-page"><div class="eyebrow">KATALOG SIMULASI</div><h1 class="page-title">Jelajahi Simulasi</h1><p class="page-intro">Temukan bidang pekerjaan dan coba pengalaman kerja sesuai minatmu.</p><div class="filter-panel explore-filters"><label class="search-wrap">${ico("search")}<input id="catalog-search" type="search" placeholder="Cari posisi atau perusahaan..." value="${esc(filters.search)}" aria-label="Cari posisi atau perusahaan" /></label><label class="select-wrap">Bidang <select id="catalog-category"><option value="all">Semua</option>${categories.map((category) => `<option value="${esc(category)}" ${filters.category === category ? "selected" : ""}>${esc(category)}</option>`).join("")}</select></label></div><div id="catalog-container" aria-live="polite"></div></section>`;
 }
 
 export function renderCatalogList(filters) {

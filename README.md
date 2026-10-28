@@ -4,16 +4,18 @@
 
 > **TRANSPARANSI:** perusahaan dan supervisor fiktif. Mode autentikasi, checkout, entitlement, sertifikat, dan penyimpanan menggunakan browser lokal. Tidak menerima pembayaran sungguhan, tidak memiliki mitra resmi, tidak menerbitkan sertifikasi profesi, dan tidak membuktikan dampak penempatan kerja.
 
-## Cara paling mudah: jalankan TANPA menginstal paket npm
+## Menjalankan aplikasi dengan Supabase Auth
 
 Membutuhkan **Node.js 20.19+ atau 22.12+** (disarankan Node 22).
 
+Salin `.env.example` menjadi `.env`, isi `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY` dari Supabase Project Settings → API, lalu jalankan:
+
 ```bash
-cd SiMagang-MVP-v3
+npm install
 npm run demo
 ```
 
-Buka `http://localhost:4173/#/home`. Mode ini menggunakan server HTTP bawaan Node.js; **tidak membutuhkan `npm install`**. Windows juga dapat melakukan double-click `start-demo-windows.bat`. Jangan buka `index.html` langsung menggunakan `file://`, karena browser memblokir ES modules lokal dan jalur aset.
+Buka `http://localhost:4173/#/auth` untuk masuk atau `http://localhost:4173/#/register` untuk membuat akun Supabase. `npm run dev` juga tersedia pada port 5173. Windows dapat menjalankan `start-demo-windows.bat`. Jangan buka `index.html` langsung menggunakan `file://`.
 
 ## Pengembangan normal dengan Vite + Vanilla JS + Tailwind CSS v4
 

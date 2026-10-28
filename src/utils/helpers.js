@@ -1,4 +1,4 @@
-import { getOptionLabel } from "../data/systemAnalyst.js";
+﻿import { getOptionLabel } from "../data/systemAnalyst.js";
 
 export const esc = (v) =>
   String(v ?? "").replace(
@@ -30,7 +30,9 @@ export const avatarTone = (user) =>
     : "navy";
 
 export const fieldName = (f, v) =>
-  f.type === "textarea"
+  f.type === "file"
+    ? (typeof v === "string" ? v : v?.name || "Belum diunggah")
+    : f.type === "textarea"
     ? String(v || "").trim() || "Belum diisi"
     : f.type === "multi"
       ? (v || []).map((x) => getOptionLabel(f, x)).join("; ") || "Belum diisi"
@@ -46,6 +48,17 @@ export function readForm(form, config) {
       obj[field.id] = [
         ...form.querySelectorAll(`input[name="${field.id}"]:checked`),
       ].map((i) => i.value);
+    } else if (field.type === "file") {
+      const input = form.elements[field.id];
+      const file = input?.files?.[0];
+      if (file) {
+        const maxMB = Number(field.maxFileSizeMB) || 10;
+        if (file.size > maxMB * 1024 * 1024) throw new Error(`Ukuran file maksimal ${maxMB} MB.`);
+        obj[field.id] = { name: file.name, size: file.size, type: file.type, lastModified: file.lastModified };
+        input.dataset.existingFile = JSON.stringify(obj[field.id]);
+      } else {
+        try { obj[field.id] = JSON.parse(input?.dataset.existingFile || "null") || ""; } catch { obj[field.id] = ""; }
+      }
     } else {
       obj[field.id] = form.elements[field.id]?.value || "";
     }

@@ -2,10 +2,11 @@ import { mockApi } from "./mockAdapter.js";
 import { supabaseAdapter } from "./supabaseAdapter.js";
 import { emptyState, readState, writeState } from "../utils/storage.js";
 
-export const authApi = supabaseAdapter;
 const viteEnv = import.meta.env || {};
 export const isSupabase = viteEnv.VITE_APP_MODE === "supabase";
 export const isDemo = !isSupabase;
+
+export const authApi = isSupabase ? supabaseAdapter : {};
 
 const persistedMutations = new Set([
   "login", "updateProfile", "checkout", "startAttempt", "newAttempt", "restartAttempt",
@@ -55,6 +56,29 @@ const supabaseApi = {
             }
           }
         }
+      }
+    }
+    const manualReviews = await supabaseAdapter.getManualReviews();
+    for (const review of manualReviews) {
+      const finalSubmission = cloudState.attempts
+        ?.find((attempt) => attempt.id === review.attempt_id)
+        ?.tasks?.[review.task_id]?.final;
+      if (!finalSubmission) continue;
+      finalSubmission.reviewStatus = review.review_status;
+      if (review.review_status === "reviewed") {
+        finalSubmission.assessment = {
+          score: review.manual_score,
+          breakdown: [{
+            fieldId: "manual-review",
+            label: "Penilaian admin",
+            earned: review.manual_score,
+            max: 100,
+            correct: review.manual_score >= 70,
+            feedback: review.manual_feedback,
+          }],
+          rubricVersion: "ADMIN-MANUAL-1",
+          gradedAt: review.reviewed_at,
+        };
       }
     }
     writeState(cloudState || emptyState());

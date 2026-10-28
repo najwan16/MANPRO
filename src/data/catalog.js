@@ -94,7 +94,7 @@ export let simulations = defaultSimulations;
 // remain as a demo fallback and as the initial data source for the seed script.
 export function hydrateCatalog(companyRows, simulationRows, taskRows) {
   if (!Array.isArray(simulationRows) || simulationRows.length === 0) return false;
-  const mappedCompanies = companyRows.map((row) => ({ ...row.definition, id: row.id }));
+  const mappedCompanies = companyRows.map((row) => ({ ...row.definition, id: row.id, name: row.name }));
   const mappedSimulations = simulationRows.map((row) => {
     const definition = row.definition || {};
     const projectTasks = taskRows.filter((task) => task.simulation_id === row.id)

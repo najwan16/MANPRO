@@ -39,7 +39,7 @@ test('checkout grants scoped access; each task is submitted once',()=>{
   for(const config of tasks){
     api.saveDraft(config.id,correct(config));const result=api.submitTask(config.id);
     assert.equal(result.snapshot.assessment.score,100);
-    assert.deepEqual(api.getActive().tasks[config.id].final,result.snapshot);
+    assert.deepEqual(JSON.parse(JSON.stringify(api.getActive().tasks[config.id].final)),JSON.parse(JSON.stringify(result.snapshot)));
     assert.throws(()=>api.submitTask(config.id),/sudah dikirim/);
     assert.throws(()=>api.saveDraft(config.id,incorrect(config)),/sudah dikirim/);
   }
