@@ -120,7 +120,13 @@ const renderAdminTask = (form, index, taskData = null) => {
     const type = question.querySelector('[data-question-field="type"]')?.value;
     const rubric = question.querySelector("[data-question-rubric]");
     const correct = question.querySelector("[data-question-correct]");
-    if (rubric) rubric.hidden = !["essay", "code", "file"].includes(type);
+    const manualReview = question.querySelector('[data-question-field="manualReview"]');
+    const showRubric = ["essay", "code", "file"].includes(type) || Boolean(manualReview?.checked);
+    if (rubric) {
+      rubric.hidden = !showRubric;
+      const rubricInput = rubric.querySelector("textarea");
+      if (rubricInput) rubricInput.required = showRubric;
+    }
     if (correct) correct.hidden = type !== "short_answer";
   });
   if (questionCards.length) {
@@ -439,10 +445,21 @@ document.addEventListener("change", (e) => {
       const questionIndex = Number(card.dataset.questionIndex);
       const question = tasks[taskIndex].definition.questions[questionIndex];
       question.type = e.target.value;
+      if (["essay", "code", "file"].includes(question.type)) question.manualReview = true;
       if (["multiple_choice", "multiple_select"].includes(question.type) && !question.options) {
         const template = question.type === "multiple_select" ? "multiple_select" : "multiple_choice";
         Object.assign(question, { options: "Pilihan A\nPilihan B\nPilihan C", correct: template === "multiple_select" ? "Pilihan A, Pilihan B" : "Pilihan A" });
       }
+      form.elements.tasks.value = JSON.stringify(tasks);
+      renderAdminTask(form, taskIndex, tasks);
+    }
+  }
+  if (e.target.matches('[data-question-field="manualReview"]')) {
+    const form = document.getElementById("admin-simulation-form");
+    if (form) {
+      const card = e.target.closest("[data-question-card]");
+      const taskIndex = Number(card.dataset.taskIndex);
+      const tasks = syncAdminTasks(form);
       form.elements.tasks.value = JSON.stringify(tasks);
       renderAdminTask(form, taskIndex, tasks);
     }

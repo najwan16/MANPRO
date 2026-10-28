@@ -58,6 +58,27 @@ test("file upload questions require an admin rubric and mark the task for manual
   assert.throws(() => adminSimulationPayload(null, values({ tasks: JSON.stringify([invalidTask]) })), /panduan pemeriksaan admin wajib diisi/);
 });
 
+test("essay and selected short-answer questions enter the admin review queue", () => {
+  const task = { id: "task-1", sequence: 1, title: "Jawaban tertulis", definition: {
+    question: "Jelaskan solusi", manualReview: true,
+    fields: [
+      { id: "essay", label: "Jelaskan solusi", type: "textarea", required: true },
+      { id: "short", label: "Alasan singkat", type: "text", required: true },
+    ],
+    questions: [
+      { prompt: "Jelaskan solusi", type: "essay", manualReview: true, rubric: "Nilai ketepatan analisis, alasan, dan kelengkapan jawaban." },
+      { prompt: "Alasan singkat", type: "short_answer", manualReview: true, rubric: "Nilai relevansi dan kejelasan alasan." },
+    ],
+  } };
+  const result = adminSimulationPayload(null, values({ tasks: JSON.stringify([task]) }));
+  assert.equal(result.tasks[0].definition.manualReview, true);
+  assert.equal(result.tasks[0].definition.questions[0].manualReview, true);
+  assert.equal(result.tasks[0].definition.questions[1].manualReview, true);
+
+  const invalidTask = { ...task, definition: { ...task.definition, questions: [{ ...task.definition.questions[1], rubric: "" }] } };
+  assert.throws(() => adminSimulationPayload(null, values({ tasks: JSON.stringify([invalidTask]) })), /panduan pemeriksaan admin wajib diisi/);
+});
+
 test("published backend task definitions hydrate into the student question page schema", () => {
   hydrateCatalog(
     [{ id: "qa-company", definition: { name: "QA Company", initials: "QC" } }],
