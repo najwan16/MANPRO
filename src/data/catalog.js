@@ -94,13 +94,22 @@ export let simulations = defaultSimulations;
 // remain as a demo fallback and as the initial data source for the seed script.
 export function hydrateCatalog(companyRows, simulationRows, taskRows) {
   if (!Array.isArray(simulationRows) || simulationRows.length === 0) return false;
-  const mappedCompanies = companyRows.map((row) => ({ ...row.definition, id: row.id, name: row.name }));
+  const mappedCompanies = (companyRows || []).map((row) => ({ ...row.definition, id: row.id, name: row.name }));
   const mappedSimulations = simulationRows.map((row) => {
     const definition = row.definition || {};
-    const projectTasks = taskRows.filter((task) => task.simulation_id === row.id)
+    const rowsForSimulation = (taskRows || []).filter((task) => task.simulation_id === row.id)
       .sort((a, b) => a.sequence - b.sequence)
       .map((task) => ({ ...task.definition, id: task.id }));
-    return { ...definition, id: row.id, company: row.company_id, status: row.status, price: row.price_idr, projectTasks };
+    // The admin editor also persists a task snapshot in definition. Prefer
+    // normalized task rows, but use that snapshot if a deployment is missing
+    // task rows (or its read policy hasn't been applied yet).
+    const embeddedTasks = Array.isArray(definition.projectTasks) ? definition.projectTasks : [];
+    const projectTasks = rowsForSimulation.length ? rowsForSimulation : embeddedTasks;
+    const clean = (value) => String(value || "").trim();
+    const roleName = [row.role_name, definition.role_name, definition.role, row.title, definition.title]
+      .map(clean).find((value) => /[\p{L}\p{N}]/u.test(value)) || "Simulasi pekerjaan";
+    const title = clean(row.title) || clean(definition.title) || roleName;
+    return { ...definition, id: row.id, company: row.company_id, role_name: roleName, role: roleName, title, status: row.status, price: row.price_idr, projectTasks };
   });
   companies = mappedCompanies;
   simulations = mappedSimulations;

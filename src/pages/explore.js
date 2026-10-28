@@ -17,7 +17,7 @@ export function renderCatalogList(filters) {
   const list = simulations.filter(
     (p) =>
       (filters.category === "all" || catalogCategory(p) === filters.category) &&
-      [p.role, getCompany(p.company).name]
+      [p.role, getCompany(p.company)?.name || "Perusahaan simulasi"]
         .join(" ")
         .toLowerCase()
         .includes(query)

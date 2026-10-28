@@ -166,6 +166,7 @@ const ensureAdminMetadataFields = () => {
     <label class="work-field"><span>Deliverable utama simulasi *</span><input name="deliverable" required maxlength="180" placeholder="Contoh: User journey dan rencana usability test" /></label>
     <label class="work-field"><span>Tools (satu per baris)</span><textarea name="tools" rows="2" placeholder="Contoh: Figma (opsional)"></textarea></label>
     <label class="work-field"><span>Status publikasi *</span><select name="status" required><option value="draft">Draft (tidak tampil ke peserta)</option><option value="soon">Segera hadir</option><option value="ready">Tersedia di eksplorasi</option></select></label>
+    <label class="work-field admin-manual-review-toggle"><input type="checkbox" name="freeTrialEnabled"/> Sediakan uji coba gratis untuk simulasi ini</label>
     <label class="work-field"><span>Inisial perusahaan *</span><input name="company_initials" required maxlength="4" placeholder="Contoh: ND" /></label>
     <label class="work-field"><span>Warna perusahaan *</span><input name="company_color" type="color" value="#e7efff" required /></label>
     <label class="work-field"><span>Deskripsi perusahaan *</span><textarea name="company_desc" rows="2" required placeholder="Ringkasan perusahaan yang tampil di halaman detail."></textarea></label>
@@ -199,6 +200,15 @@ function frame(content, active = "home", options = {}) {
 function render(scroll = false) {
   const value = route();
   const [name, id, subId] = value.split("/");
+  if (["free", "free-result"].includes(name)) {
+    const trialSimulationId = name === "free" && id === "start" ? subId || "system-analyst" : id || "system-analyst";
+    const trialSimulation = getSimulation(trialSimulationId);
+    if (!trialSimulation || trialSimulation.freeTrialEnabled === false || !getFreeTrial(trialSimulationId)) {
+      toast("Uji coba gratis tidak diaktifkan atau belum memiliki soal yang dapat dinilai otomatis.");
+      go(`detail/${trialSimulationId}`);
+      return;
+    }
+  }
   if (isSupabase && ["detail", "explore", "dashboard", "progress"].includes(name) && api.state().user && !entitlementRefresh) {
     entitlementRefresh = api.refreshEntitlements()
       .then((changed) => { if (changed && route() === value) render(); })
@@ -497,11 +507,13 @@ document.addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
       const form = e.target;
-      api.checkout(form.dataset.simulation, String(new FormData(form).get("method")));
       const simulation = getSimulation(form.dataset.simulation);
+      const firstTask = getSimulationTasks(simulation)[0];
+      if (!firstTask) throw new Error("Soal simulasi belum tersedia. Admin perlu memeriksa dan menyimpan task terlebih dahulu.");
+      api.checkout(form.dataset.simulation, String(new FormData(form).get("method")));
       api.startAttempt(simulation.id);
       await api.flushState();
-      location.hash = `#/workspace/${getSimulationTasks(simulation)[0]?.id || "requirements"}`;
+      location.hash = `#/workspace/${encodeURIComponent(firstTask.id)}`;
     } catch (error) {
       toast(error.message || "Akses simulasi gagal diaktifkan.");
     }
@@ -751,6 +763,7 @@ document.addEventListener("click", async (e) => {
         for (const [key, value] of Object.entries({ category: definition.category, level: definition.level, duration: definition.duration, teaser: definition.teaser, icon: definition.icon, summary: definition.summary, description: definition.description, about: definition.about, caseName: definition.caseName, caseProblem: definition.caseProblem, deliverable: definition.deliverable, status: payload.simulation.status, skills: (definition.skills || []).join(", "), tools: (definition.tools || []).join("\n"), company_initials: company?.definition?.initials, company_color: company?.definition?.color, company_desc: company?.definition?.desc })) {
           if (form.elements[key]) form.elements[key].value = value || "";
         }
+        form.elements.freeTrialEnabled.checked = Boolean(definition.freeTrialEnabled);
         form.elements.task_count.value = String(payload.tasks.length);
         const selectedPricingTier = definition.selected_pricing_tier || (Number(payload.simulation.price_idr) === 29000 ? "advanced" : "standard");
         const pricingRadio = form.querySelector(`input[name="pricing_tier"][value="${selectedPricingTier}"]`);

@@ -125,6 +125,7 @@ export function adminSimulationPayload(form, formData) {
   for (const [field, label] of [["company_id", "Perusahaan"], ["role_name", "Posisi"], ["title", "Judul proyek"], ["category", "Bidang"], ["level", "Level"], ["duration", "Durasi total"], ["teaser", "Ringkasan kartu eksplorasi"], ["icon", "Ikon eksplorasi"], ["summary", "Ringkasan"], ["description", "Deskripsi pekerjaan"], ["about", "Tentang simulasi"], ["caseName", "Nama studi kasus"], ["caseProblem", "Masalah studi kasus"], ["deliverable", "Deliverable simulasi"], ["company_name", "Nama perusahaan"], ["company_desc", "Deskripsi perusahaan"]]) {
     if (!String(formData.get(field) || "").trim()) throw new Error(`${label} wajib diisi.`);
   }
+  if (!/[\p{L}\p{N}]/u.test(String(formData.get("role_name") || ""))) throw new Error("Posisi harus memiliki nama yang berisi huruf atau angka.");
   const tasksText = String(formData.get("tasks") || "");
   let tasks;
   try { tasks = JSON.parse(tasksText); } catch { throw new Error("Daftar tugas harus berupa JSON yang valid."); }
@@ -153,6 +154,10 @@ export function adminSimulationPayload(form, formData) {
     task.definition.id = task.id;
     task.definition.number = index + 1;
   });
+  const freeTrialEnabled = formData.get("freeTrialEnabled") === "on";
+  if (freeTrialEnabled && !tasks.some((task) => !task.definition.manualReview && Object.keys(task.definition.expected || {}).length > 0 && task.definition.fields?.some((field) => field.type !== "file" && Object.hasOwn(task.definition.expected || {}, field.id)))) {
+    throw new Error("Uji coba gratis memerlukan setidaknya satu task dengan jawaban yang dapat dinilai otomatis. Tambahkan kunci jawaban atau nonaktifkan opsi uji coba gratis.");
+  }
   const selectedTier = String(formData.get("pricing_tier") || "");
   if (!["standard", "advanced"].includes(selectedTier)) throw new Error("Pilih paket Standar atau Advanced.");
   const price = selectedTier === "advanced" ? 29000 : 19000;
@@ -163,7 +168,7 @@ export function adminSimulationPayload(form, formData) {
     summary: String(formData.get("summary") || "").trim(), description: String(formData.get("description") || "").trim(), about: String(formData.get("about") || "").trim(),
     caseName: String(formData.get("caseName") || "").trim(), caseProblem: String(formData.get("caseProblem") || "").trim(), deliverable: String(formData.get("deliverable") || "").trim(),
     skills: String(formData.get("skills") || "").split(",").map((item) => item.trim()).filter(Boolean),
-    tools: String(formData.get("tools") || "").split("\n").map((item) => item.trim()).filter(Boolean), selected_pricing_tier: selectedTier,
+    tools: String(formData.get("tools") || "").split("\n").map((item) => item.trim()).filter(Boolean), freeTrialEnabled, selected_pricing_tier: selectedTier,
     pricing: [{ id: "standard", name: "Standar", price_idr: 19000 }, { id: "advanced", name: "Advanced", price_idr: advancedPrice }],
     projectTasks: tasks.map((task) => ({ ...task.definition, id: task.id, title: task.title })),
   };

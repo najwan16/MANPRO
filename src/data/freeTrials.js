@@ -1,4 +1,5 @@
 import { freeTask as systemAnalystTask } from "./systemAnalyst.js";
+import { getCompany, getSimulation, getSimulationTasks } from "./catalog.js";
 
 const trials = {
   "system-analyst": {
@@ -65,6 +66,31 @@ const trials = {
 };
 
 export function getFreeTrial(simulationId = "system-analyst") {
-  return trials[simulationId] || trials["system-analyst"];
+  if (trials[simulationId]) return trials[simulationId];
+  const simulation = getSimulation(simulationId);
+  if (!simulation) return null;
+  const sourceTask = getSimulationTasks(simulation).find((task) => {
+    const expected = task.expected || {};
+    return !task.manualReview && Object.keys(expected).length > 0 && (task.fields || []).some((field) => field.type !== "file" && Object.hasOwn(expected, field.id));
+  });
+  if (!sourceTask) return null;
+  const expected = sourceTask.expected || {};
+  const fields = (sourceTask.fields || []).filter((field) => field.type !== "file" && Object.hasOwn(expected, field.id));
+  const fieldIds = new Set(fields.map((field) => field.id));
+  const company = getCompany(simulation.company);
+  return {
+    role: simulation.role || simulation.role_name || "Simulasi",
+    company: company?.name || "Perusahaan simulasi",
+    contact: "Tim Studi Kasus",
+    intro: simulation.teaser || simulation.summary || simulation.description || "Coba satu bagian dari simulasi ini dan lihat umpan balik awal.",
+    task: {
+      title: sourceTask.title || "Tantangan awal",
+      prompt: sourceTask.question || sourceTask.briefing || sourceTask.description || simulation.caseProblem || "Selesaikan tantangan awal berikut.",
+      fields,
+      expected: Object.fromEntries(Object.entries(expected).filter(([fieldId]) => fieldIds.has(fieldId))),
+      weights: Object.fromEntries(Object.entries(sourceTask.weights || {}).filter(([fieldId]) => fieldIds.has(fieldId))),
+      feedback: Object.fromEntries(Object.entries(sourceTask.feedback || {}).filter(([fieldId]) => fieldIds.has(fieldId))),
+    },
+  };
 }
 

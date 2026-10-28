@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { adminSimulationPayload } from "../src/pages/admin.js";
 import { getSimulation, getSimulationTasks, hydrateCatalog } from "../src/data/catalog.js";
+import { getFreeTrial } from "../src/data/freeTrials.js";
 
 function values(overrides = {}) {
   const data = {
@@ -30,6 +31,15 @@ test("admin builder rejects malformed task JSON and missing required information
   assert.throws(() => adminSimulationPayload(null, values({ tasks: "{" })), /JSON yang valid/);
   assert.throws(() => adminSimulationPayload(null, values({ category: "" })), /Bidang wajib diisi/);
   assert.throws(() => adminSimulationPayload(null, values({ task_count: "2" })), /Jumlah task tidak sesuai/);
+});
+
+test("admin can enable optional free trial only when a task has auto-gradable answers", () => {
+  const enabled = adminSimulationPayload(null, values({ freeTrialEnabled: "on" }));
+  assert.equal(enabled.simulation.definition.freeTrialEnabled, true);
+  assert.equal(adminSimulationPayload(null, values()).simulation.definition.freeTrialEnabled, false);
+  const tasks = JSON.parse(values().get("tasks"));
+  tasks[0].definition.expected = undefined;
+  assert.throws(() => adminSimulationPayload(null, values({ freeTrialEnabled: "on", tasks: JSON.stringify(tasks) })), /task dengan jawaban yang dapat dinilai otomatis/);
 });
 
 test("multiple choice and multiple select map to the student renderer field schema", () => {
@@ -95,4 +105,24 @@ test("published backend task definitions hydrate into the student question page 
   assert.equal(tasks[0].fields[0].id, "answer");
   assert.deepEqual(tasks[0].expected, { answer: "yes" });
   assert.deepEqual(tasks[0].weights, { answer: 100 });
+  const trial = getFreeTrial("qa-simulation");
+  assert.equal(trial.role, "QA");
+  assert.equal(trial.task.title, "Question 1");
+  assert.deepEqual(trial.task.expected, { answer: "yes" });
+});
+
+test("catalog falls back to embedded task definitions and a meaningful position name", () => {
+  const embeddedTask = { id: "embedded-task-1", sequence: 1, title: "Analisis kebutuhan", definition: {
+    id: "embedded-task-1", title: "Analisis kebutuhan", question: "Pilih jawaban", deliverable: "Catatan",
+    fields: [{ id: "answer", label: "Jawaban", type: "textarea", minlength: 1 }],
+  } };
+  hydrateCatalog(
+    [],
+    [{ id: "embedded-sim", company_id: "missing-company", role_name: ".", title: "Analisis Produk", price_idr: 19000, status: "ready", definition: { projectTasks: [embeddedTask.definition] } }],
+    [],
+  );
+  const simulation = getSimulation("embedded-sim");
+  assert.equal(simulation.role, "Analisis Produk");
+  assert.equal(getSimulationTasks(simulation)[0].id, "embedded-task-1");
+  assert.equal(getSimulationTasks(simulation)[0].fields[0].label, "Jawaban");
 });

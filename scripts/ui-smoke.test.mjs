@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mockApi as api } from "../src/services/mockAdapter.js";
-import { simulations, getSimulationTasks } from "../src/data/catalog.js";
+import { simulations, getSimulationTasks, getSimulation, hydrateCatalog } from "../src/data/catalog.js";
 import { HomePage, productCard } from "../src/pages/home.js";
 import { DetailPage } from "../src/pages/detail.js";
 import { WorkspacePage } from "../src/pages/workspace.js";
@@ -80,4 +80,20 @@ test("catalog access state changes from available to active after demo checkout"
   api.checkout(simulation.id, "qris");
   assert.match(productCard(simulation), /Simulasi Aktif/);
   api.reset();
+});
+
+test("a newly created simulation opens its authored task after demo access is activated", () => {
+  const task = { id: "new-simulation-task-1", number: 1, title: "Analisis kebutuhan", duration: "20 menit",
+    question: "Pilih jawaban yang tepat", deliverable: "Catatan analisis", fields: [{ id: "answer", label: "Jawaban soal", type: "textarea", minlength: 1 }] };
+  hydrateCatalog([], [{ id: "new-simulation", company_id: "missing", role_name: ".", title: "Analisis Produk", price_idr: 19000, status: "ready", definition: { projectTasks: [task] } }], []);
+  const simulation = getSimulation("new-simulation");
+  assert.match(productCard(simulation), /Analisis Produk/);
+  api.reset();
+  api.login("Peserta Baru", "peserta-baru@example.com");
+  api.checkout(simulation.id, "qris");
+  api.startAttempt(simulation.id);
+  const workspace = WorkspacePage(task.id);
+  assert.match(workspace, /Analisis kebutuhan/);
+  assert.match(workspace, /Jawaban soal/);
+  assert.match(workspace, /task-work-form/);
 });
